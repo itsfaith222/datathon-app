@@ -61,7 +61,30 @@ def check_ingredient_against_restrictions(ingredient: str, restrictions: Dict) -
     # Check dietary restrictions
     for restriction in restrictions.get("restrictions", []):
         restriction_lower = restriction.lower().strip()
-        # Check against known restriction patterns
+        
+        # 1. Check against new classification dataset
+        try:
+            from .food_classification import get_food_classification
+            classification = get_food_classification(ingredient)
+            
+            if classification:
+                # Map user restriction to dataset key
+                # e.g. "Vegan" -> "vegan", "Gluten-Free" -> "gluten-free"
+                is_compliant = classification.get(restriction_lower)
+                
+                # If dataset explicitly says False (not compliant), flag it
+                if is_compliant is False:
+                    return {
+                        "type": "restriction",
+                        "item": restriction,
+                        "ingredient": ingredient,
+                        "source": "classification_dataset"
+                    }
+                # If True, we could technically skip other checks, but let's be safe and continue
+        except Exception as e:
+            print(f"Error checking classification dataset: {e}")
+
+        # 2. Check against known restriction patterns (Fallback/Augmentation)
         restriction_patterns = {
             "vegan": ["milk", "egg", "cheese", "butter", "honey", "gelatin", "whey"],
             "vegetarian": ["meat", "chicken", "beef", "pork", "fish", "gelatin"],

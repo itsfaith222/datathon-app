@@ -128,8 +128,30 @@ def save_history(items):
 
 
 # Initialize on startup
+# Initialize on startup
 load_profiles()  # Initialize profiles system
 load_history()
+
+# Start background thread to load dataset
+def preload_dataset():
+    try:
+        print("Pre-loading food allergens dataset...")
+        from dataset.food_allergens_dataset import load_food_allergens_dataset
+        load_food_allergens_dataset()
+        print("Food allergens dataset pre-loaded.")
+    except Exception as e:
+        print(f"Failed to pre-load allergens dataset: {e}")
+        
+    try:
+        print("Pre-loading food classification dataset...")
+        from dataset.food_classification import load_food_classification_dataset
+        load_food_classification_dataset()
+        print("Food classification dataset pre-loaded.")
+    except Exception as e:
+        print(f"Failed to pre-load classification dataset: {e}")
+
+import threading
+threading.Thread(target=preload_dataset, daemon=True).start()
 
 
 @app.route("/")
@@ -141,7 +163,7 @@ def index():
 def fetch_product_from_api(barcode):
     """
     Fetch product data from Open Food Facts API.
-    Returns the product data dictionary or None if not found.
+    Returns (product_data, error_message).
     """
     try:
         url = f"https://world.openfoodfacts.org/api/v0/product/{barcode}.json"
@@ -151,11 +173,20 @@ def fetch_product_from_api(barcode):
             data = response.json()
             # Open Food Facts API returns data in format: {"status": 1, "product": {...}}
             if data.get("status") == 1 and "product" in data:
-                return data["product"]
-        return None
+                return data["product"], None
+            else:
+                return None, "Product not found in Open Food Facts database"
+        else:
+            return None, f"API returned status code {response.status_code}"
+    except requests.exceptions.Timeout:
+        print(f"Timeout fetching from Open Food Facts API for {barcode}")
+        return None, "Connection timed out. Please try again."
+    except requests.exceptions.ConnectionError:
+        print(f"Connection error fetching from Open Food Facts API for {barcode}")
+        return None, "Connection error. Please check your internet connection."
     except Exception as e:
         print(f"Error fetching from Open Food Facts API: {e}")
-        return None
+        return None, f"Error: {str(e)}"
 
 
 def search_similar_barcodes(barcode, prefix_length=8, max_results=10):
@@ -229,14 +260,14 @@ def search_similar_barcodes(barcode, prefix_length=8, max_results=10):
 @app.route("/api/scan/<barcode>", methods=["GET"])
 def scan_barcode(barcode):
     # Search in Open Food Facts API
-    product_data = fetch_product_from_api(barcode)
+    product_data, error_msg = fetch_product_from_api(barcode)
     
     if not product_data:
         # Search for similar barcodes
         similar_products = search_similar_barcodes(barcode, prefix_length=8, max_results=10)
         
         return jsonify({
-            "error": "i cant find it :)",
+            "error": error_msg or "i cant find it :)",
             "similarProducts": similar_products
         }), 404
     
@@ -551,7 +582,7 @@ def check_ingredients():
     # Fetch product if barcode provided
     product_data = None
     if barcode:
-        product_data = fetch_product_from_api(barcode)
+        product_data, _ = fetch_product_from_api(barcode)
     
     # Use provided product data or fetched data
     if not product_data and data.get("productData"):
