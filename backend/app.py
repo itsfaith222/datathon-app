@@ -1,13 +1,78 @@
 # backend/app.py
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, send_from_directory, request
 from flask_cors import CORS
 import os
 import requests
+import json
+from dataset_loader import check_ingredient_against_restrictions
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+PROFILE_FILE = os.path.join(BASE_DIR, "profile.json")
+HISTORY_FILE = os.path.join(BASE_DIR, "history.json")
 
 app = Flask(__name__, static_folder=os.path.join(BASE_DIR, "..", "frontend"), static_url_path="/")
 CORS(app)
+
+# In-memory storage (fallback if files don't exist)
+user_profile = {"allergies": [], "restrictions": []}
+saved_items = []  # Last 2 scanned items
+
+def load_profile():
+    """Load user profile from file or return default."""
+    global user_profile
+    try:
+        if os.path.exists(PROFILE_FILE):
+            with open(PROFILE_FILE, 'r') as f:
+                user_profile = json.load(f)
+        return user_profile
+    except Exception as e:
+        print(f"Error loading profile: {e}")
+        return {"allergies": [], "restrictions": []}
+
+
+def save_profile(profile):
+    """Save user profile to file."""
+    global user_profile
+    try:
+        user_profile = profile
+        with open(PROFILE_FILE, 'w') as f:
+            json.dump(profile, f)
+        return True
+    except Exception as e:
+        print(f"Error saving profile: {e}")
+        return False
+
+
+def load_history():
+    """Load saved items history from file or return empty list."""
+    global saved_items
+    try:
+        if os.path.exists(HISTORY_FILE):
+            with open(HISTORY_FILE, 'r') as f:
+                saved_items = json.load(f)
+        return saved_items
+    except Exception as e:
+        print(f"Error loading history: {e}")
+        return []
+
+
+def save_history(items):
+    """Save items history to file (keep only last 2)."""
+    global saved_items
+    try:
+        saved_items = items[-2:] if len(items) > 2 else items
+        with open(HISTORY_FILE, 'w') as f:
+            json.dump(saved_items, f)
+        return True
+    except Exception as e:
+        print(f"Error saving history: {e}")
+        return False
+
+
+# Initialize on startup
+load_profile()
+load_history()
+
 
 @app.route("/")
 def index():
@@ -138,6 +203,117 @@ def scan_barcode(barcode):
         "ingredients": ingredients_list,
         "allData": product_data  # Return all API data
     })
+
+
+# -------- Profile endpoints --------
+@app.route("/api/profile/restrictions", methods=["GET"])
+def get_restrictions():
+    """Get user's dietary restrictions and allergies."""
+    profile = load_profile()
+    return jsonify(profile)
+
+
+@app.route("/api/profile/restrictions", methods=["POST"])
+def save_restrictions():
+    """Save user's dietary restrictions and allergies."""
+    data = request.get_json() or {}
+    allergies = data.get("allergies", [])
+    restrictions = data.get("restrictions", [])
+    
+    profile = {
+        "allergies": allergies if isinstance(allergies, list) else [],
+        "restrictions": restrictions if isinstance(restrictions, list) else []
+    }
+    
+    if save_profile(profile):
+        return jsonify({"ok": True, "profile": profile})
+    else:
+        return jsonify({"error": "Failed to save profile"}), 500
+
+
+# -------- Check ingredients endpoint --------
+@app.route("/api/check", methods=["POST"])
+def check_ingredients():
+    """Check product ingredients against user restrictions."""
+    data = request.get_json() or {}
+    barcode = data.get("barcode")
+    
+    # Get user profile
+    profile = load_profile()
+    
+    # Fetch product if barcode provided
+    product_data = None
+    if barcode:
+        product_data = fetch_product_from_api(barcode)
+    
+    # Use provided product data or fetched data
+    if not product_data and data.get("productData"):
+        product_data = data.get("productData")
+    
+    if not product_data:
+        return jsonify({"error": "Product data not found"}), 404
+    
+    # Extract ingredients
+    ingredients_text = product_data.get("ingredients_text") or product_data.get("ingredients_text_en") or ""
+    ingredients_list = []
+    if ingredients_text:
+        ingredients_list = [ing.strip() for ing in str(ingredients_text).split(",") if ing.strip()]
+    
+    # Also check ingredients array if available
+    if not ingredients_list and "ingredients" in product_data:
+        ingredients = product_data.get("ingredients", [])
+        if isinstance(ingredients, list):
+            ingredients_list = [ing.get("text", "") for ing in ingredients if isinstance(ing, dict) and ing.get("text")]
+    
+    # Check each ingredient against restrictions
+    flagged = []
+    for ingredient in ingredients_list:
+        result = check_ingredient_against_restrictions(ingredient, profile)
+        if result:
+            flagged.append(result)
+    
+    return jsonify({
+        "flagged": flagged,
+        "hasIssues": len(flagged) > 0,
+        "ingredientsChecked": len(ingredients_list),
+        "productName": product_data.get("product_name") or product_data.get("product_name_en") or "Unknown"
+    })
+
+
+# -------- History endpoints --------
+@app.route("/api/history", methods=["GET"])
+def get_history():
+    """Get saved items history (last 2 items)."""
+    history = load_history()
+    return jsonify({"items": history})
+
+
+@app.route("/api/history", methods=["POST"])
+def save_to_history():
+    """Save an item to history (keep only last 2)."""
+    data = request.get_json() or {}
+    
+    item = {
+        "barcode": data.get("barcode"),
+        "productName": data.get("productName"),
+        "imageUrl": data.get("imageUrl"),
+        "productData": data.get("productData")
+    }
+    
+    # Load current history
+    history = load_history()
+    
+    # Remove if already exists (to move to end)
+    history = [h for h in history if h.get("barcode") != item.get("barcode")]
+    
+    # Add new item
+    history.append(item)
+    
+    # Keep only last 2
+    if save_history(history):
+        return jsonify({"ok": True, "items": saved_items})
+    else:
+        return jsonify({"error": "Failed to save history"}), 500
 
 
 if __name__ == "__main__":
