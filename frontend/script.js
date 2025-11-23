@@ -3,6 +3,7 @@ const startBtn = document.getElementById("startScanner");
 const stopBtn = document.getElementById("stopScanner");
 const scanOutput = document.getElementById("scanOutput");
 const checkOutput = document.getElementById("checkOutput");
+const productTableContainer = document.getElementById("productTableContainer");
 
 let html5QrcodeScanner = null;
 let isScanning = false;
@@ -92,7 +93,8 @@ docReady(function() {
                 startBtn.disabled = false;
                 stopBtn.disabled = true;
                 scanOutput.textContent = "";
-                checkOutput.textContent = "";
+                checkOutput.innerHTML = "";
+                productTableContainer.innerHTML = "";
             } catch (err) {
                 console.error("Error stopping scanner:", err);
             }
@@ -122,7 +124,21 @@ async function checkProduct(barcode) {
             });
             
             if (resp.status === 404) {
-                checkOutput.innerHTML = `<span style="color:orange">Product not in database — try saving it first or use a different barcode.</span>`;
+                const errorData = await resp.json().catch(() => ({}));
+                const errorMsg = errorData.error || "i cant find it :)";
+                
+                // Clear previous content
+                productTableContainer.innerHTML = "";
+                
+                // Display error message and similar products
+                let errorHtml = `<span style="color:orange; font-size: 18px;">${errorMsg}</span>`;
+                
+                // Display similar products if available
+                if (errorData.similarProducts && errorData.similarProducts.length > 0) {
+                    errorHtml += displaySimilarProductsHTML(errorData.similarProducts);
+                }
+                
+                checkOutput.innerHTML = errorHtml;
                 return;
             }
             
@@ -133,21 +149,36 @@ async function checkProduct(barcode) {
             const data = await resp.json();
             console.log("Received data:", data);
             
-            // Display the product name
+            // Display the product name with image
             if (data.productName) {
-                checkOutput.innerHTML = `<div style="font-size: 20px; font-weight: bold; margin-top: 12px;">Item: ${data.productName}</div>`;
+                // Get image URL from allData
+                const imageUrl = data.allData?.image_front_small_url || 
+                                data.allData?.image_small_url || 
+                                data.allData?.image_url || 
+                                data.allData?.image_front_url || 
+                                null;
                 
-                if (data.safe) {
-                    checkOutput.innerHTML += `<div class="safe">SAFE ✔</div>`;
-                } else {
-                    checkOutput.innerHTML += `<div class="unsafe">NOT SAFE ✘</div>` +
-                        `<div style="margin-top:8px;"><strong>Flagged:</strong><br>` +
-                        data.flagged.map(f => `${f.type.toUpperCase()}: ${f.item}`).join("<br>") +
-                        `</div>`;
+                let imageHtml = "";
+                if (imageUrl) {
+                    imageHtml = `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(data.productName)}" 
+                                    style="max-width: 150px; max-height: 150px; border-radius: 8px; margin-right: 20px; object-fit: contain;">`;
                 }
+                
+                checkOutput.innerHTML = `<div class="product-header">
+                    <div style="display: flex; align-items: center;">
+                        ${imageHtml}
+                        <h2 style="margin: 0; flex: 1;">${escapeHtml(data.productName)}</h2>
+                    </div>
+                </div>`;
             } else {
                 checkOutput.innerHTML = `<span style="color:orange">Product found but no name available.</span>`;
             }
+            
+            // Display all product data in a table
+            if (data.allData) {
+                displayProductTable(data.allData);
+            }
+            
             return; // Success, exit function
         } catch (e) {
             console.error(`Fetch error for ${apiUrl}:`, e);
@@ -161,4 +192,110 @@ async function checkProduct(barcode) {
     checkOutput.innerHTML = `<div style="color: red;">Error checking product: ${lastError.message}<br>` +
         `<small>Make sure the Flask backend is running on http://localhost:5000<br>` +
         `Run: <code>cd backend && python app.py</code></small></div>`;
+    productTableContainer.innerHTML = "";
+}
+
+// Function to display product information in a table
+function displayProductTable(productData) {
+    if (!productData || typeof productData !== 'object') {
+        productTableContainer.innerHTML = "";
+        return;
+    }
+    
+    // Filter out null, undefined, and empty values, and sort by key
+    const entries = Object.entries(productData)
+        .filter(([key, value]) => value !== null && value !== undefined && value !== '')
+        .sort(([a], [b]) => a.localeCompare(b));
+    
+    if (entries.length === 0) {
+        productTableContainer.innerHTML = "<p>No additional product information available.</p>";
+        return;
+    }
+    
+    // Create table HTML
+    let tableHTML = `
+        <table class="product-table">
+            <thead>
+                <tr>
+                    <th>Field</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+    
+    entries.forEach(([key, value]) => {
+        // Format the field name (replace underscores with spaces, capitalize)
+        const formattedKey = key
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, l => l.toUpperCase());
+        
+        // Format the value
+        let formattedValue = value;
+        if (typeof value === 'object') {
+            formattedValue = JSON.stringify(value, null, 2);
+        } else if (typeof value === 'string' && value.length > 200) {
+            formattedValue = value.substring(0, 200) + '...';
+        }
+        
+        tableHTML += `
+            <tr>
+                <td class="field-name">${escapeHtml(formattedKey)}</td>
+                <td class="field-value">${escapeHtml(String(formattedValue))}</td>
+            </tr>
+        `;
+    });
+    
+    tableHTML += `
+            </tbody>
+        </table>
+    `;
+    
+    productTableContainer.innerHTML = tableHTML;
+}
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Function to generate HTML for similar products
+function displaySimilarProductsHTML(similarProducts) {
+    if (!similarProducts || similarProducts.length === 0) {
+        return "";
+    }
+    
+    let html = `
+        <div class="similar-products-container" style="margin-top: 20px; padding: 20px; background: rgba(255, 255, 255, 0.1); border-radius: 8px;">
+            <h3 style="color: white; margin-bottom: 15px;">Similar Products Found:</h3>
+            <div class="similar-products-list">
+    `;
+    
+    similarProducts.forEach((product) => {
+        const productName = escapeHtml(product.productName || "Unknown Product");
+        const barcode = escapeHtml(product.barcode);
+        const brand = product.brands ? escapeHtml(product.brands) : "";
+        
+        html += `
+            <div class="similar-product-item" onclick="checkProduct('${barcode}')" 
+                 style="cursor: pointer; padding: 15px; margin-bottom: 10px; background: rgba(255, 255, 255, 0.15); 
+                        border-radius: 5px; border: 1px solid rgba(255, 255, 255, 0.2); 
+                        transition: background 0.2s;">
+                <div style="font-weight: bold; color: #4CAF50; font-size: 16px;">${productName}</div>
+                <div style="color: #ccc; font-size: 14px; margin-top: 5px;">
+                    Barcode: ${barcode}
+                    ${brand ? `<br>Brand: ${brand}` : ''}
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `
+            </div>
+        </div>
+    `;
+    
+    return html;
 }

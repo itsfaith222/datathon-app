@@ -6,11 +6,115 @@
   <meta name="viewport" content="width=device-width,initial-scale=1"/>
   <title>Health Scanner (Demo)</title>
   <style>
-    body { font-family: Arial, Helvetica, sans-serif; max-width:900px; margin:20px auto; padding:12px; }
+    body { 
+      font-family: Arial, Helvetica, sans-serif; 
+      max-width:1200px; 
+      margin:20px auto; 
+      padding:12px; 
+      background-color: #001f3f; /* Navy blue */
+      color: white; /* White text for readability */
+      min-height: 100vh;
+    }
+    h1, p { color: white; }
     video { border: 1px solid #aaa; border-radius:6px; }
     .safe { color: green; font-weight: 700; font-size:18px; }
     .unsafe { color: red; font-weight: 800; font-size:20px; animation: flash 0.7s infinite; }
     @keyframes flash { 50% { opacity: 0.4 } }
+    
+    .product-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      background: white;
+    }
+    
+    .product-table th {
+      background-color: #f5f5f5;
+      padding: 12px;
+      text-align: left;
+      font-weight: bold;
+      border-bottom: 2px solid #ddd;
+      position: sticky;
+      top: 0;
+    }
+    
+    .product-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #eee;
+      word-wrap: break-word;
+      max-width: 400px;
+    }
+    
+    .product-table tr:hover {
+      background-color: #f9f9f9;
+    }
+    
+    .product-table .field-name {
+      font-weight: 600;
+      color: #333;
+      width: 200px;
+    }
+    
+    .product-table .field-value {
+      color: #666;
+    }
+    
+    .product-header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    
+    .product-header h2 {
+      margin: 0;
+    }
+    
+    .product-header img {
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+    
+    #productTableContainer {
+      max-height: 600px;
+      overflow-y: auto;
+      margin-top: 20px;
+    }
+    
+    .similar-product-item:hover {
+      background: rgba(255, 255, 255, 0.25) !important;
+      transform: translateX(5px);
+    }
+    
+    .similar-products-container {
+      animation: fadeIn 0.5s ease-in;
+    }
+    
+    button {
+      background-color: #0074D9;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin-right: 10px;
+    }
+    
+    button:hover:not(:disabled) {
+      background-color: #0056b3;
+    }
+    
+    button:disabled {
+      background-color: #555;
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+    
+    #scanOutput, #checkOutput {
+      color: white;
+    }
   </style>
 </head>
 <body>
@@ -29,6 +133,7 @@
 
   <div id="scanOutput" style="margin-top:12px;"></div>
   <div id="checkOutput" style="margin-top:12px;"></div>
+  <div id="productTableContainer"></div>
 
   <!-- html5-qrcode library -->
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
