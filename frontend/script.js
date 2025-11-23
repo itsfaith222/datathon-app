@@ -581,6 +581,9 @@ manualBarcodeInput.addEventListener("keypress", (e) => {
 async function checkProduct(barcode) {
     currentBarcode = barcode;
 
+    // Immediate feedback: Add to Scanned Items list
+    saveScannedItem(barcode, "Scanning...", null, null);
+
     checkOutput.innerHTML = `
         <div class="loading-container">
             <div class="loading-spinner"></div>
@@ -609,6 +612,9 @@ async function checkProduct(barcode) {
                 const errorMsg = errorData.error || "i cant find it :)";
 
                 checkOutput.innerHTML = `<div style="color: #dc3545; padding: 20px; background: #f8d7da; border-radius: 8px;">${errorMsg}</div>`;
+
+                // Update scanned item to reflect failure
+                saveScannedItem(barcode, "Unknown Product", null, null);
 
                 if (errorData.similarProducts && errorData.similarProducts.length > 0) {
                     displaySimilarProductsHTML(errorData.similarProducts);
@@ -675,6 +681,8 @@ async function checkProduct(barcode) {
     }
 
     checkOutput.innerHTML = `<div style="color: #dc3545; padding: 20px;">Error: ${lastError.message}</div>`;
+    // Update scanned item to reflect error
+    saveScannedItem(barcode, "Scan Error", null, null);
 }
 
 // Extract ingredients from product data
