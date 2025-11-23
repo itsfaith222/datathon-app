@@ -12,38 +12,46 @@
       box-sizing: border-box;
     }
     
-    /* CSS Variables for Light Mode (Default) */
+    /* CSS Variables - Food App Color Scheme */
     :root {
-      --bg-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      --bg-card: rgba(255, 255, 255, 0.95);
-      --bg-secondary: #f8f9fa;
-      --bg-hover: #e9ecef;
-      --text-primary: #2c3e50;
-      --text-secondary: #555;
-      --text-muted: #6c757d;
-      --text-light: #999;
-      --border-color: #e0e0e0;
-      --accent-blue: #4a90e2;
-      --accent-blue-dark: #357abd;
-      --shadow: rgba(0, 0, 0, 0.1);
-      --shadow-hover: rgba(74, 144, 226, 0.3);
+      --main-green: #87BC96;
+      --negative-space: #F9F9F9;
+      --main-text: #1E3A5F;
+      --action-orange: #FF8C42;
+      --bg-primary: var(--negative-space);
+      --bg-card: #FFFFFF;
+      --bg-secondary: #F0F4F2;
+      --bg-hover: #E8EDEA;
+      --text-primary: var(--main-text);
+      --text-secondary: #4A5D6B;
+      --text-muted: #6B7A87;
+      --text-light: #8B9BA8;
+      --border-color: #D4E0D9;
+      --accent-green: var(--main-green);
+      --accent-green-dark: #6FA37E;
+      --accent-orange: var(--action-orange);
+      --accent-orange-dark: #E67A2E;
+      --shadow: rgba(44, 62, 80, 0.08);
+      --shadow-hover: rgba(135, 188, 150, 0.2);
     }
     
     /* Dark Mode Variables */
     [data-theme="dark"] {
-      --bg-primary: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-      --bg-card: rgba(30, 30, 46, 0.95);
-      --bg-secondary: #2a2a3e;
-      --bg-hover: #3a3a4e;
-      --text-primary: #e0e0e0;
-      --text-secondary: #b0b0b0;
-      --text-muted: #888;
-      --text-light: #666;
-      --border-color: #404050;
-      --accent-blue: #5ba3f5;
-      --accent-blue-dark: #4a90e2;
+      --bg-primary: #1A2A3A;
+      --bg-card: #243447;
+      --bg-secondary: #2A3D52;
+      --bg-hover: #334A5F;
+      --text-primary: #E8F0F5;
+      --text-secondary: #C4D4E0;
+      --text-muted: #9BB0C0;
+      --text-light: #7A95A8;
+      --border-color: #3A4F65;
+      --accent-green: #6FA37E;
+      --accent-green-dark: #5A8A68;
+      --accent-orange: #FF9D5C;
+      --accent-orange-dark: #E67A2E;
       --shadow: rgba(0, 0, 0, 0.3);
-      --shadow-hover: rgba(91, 163, 245, 0.3);
+      --shadow-hover: rgba(111, 163, 126, 0.3);
     }
     
     body { 
@@ -56,6 +64,24 @@
       transition: background 0.3s ease, color 0.3s ease;
     }
     
+    /* Subtle green accent background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(135, 188, 150, 0.05) 0%, rgba(255, 140, 66, 0.03) 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    .dashboard-container {
+      position: relative;
+      z-index: 1;
+    }
+    
     .dashboard-container {
       max-width: 1400px;
       margin: 0 auto;
@@ -65,34 +91,48 @@
       height: calc(100vh - 40px);
     }
     
+    /* Main Header with Title and Theme Toggle */
+    .main-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--accent-green);
+    }
+    
+    .main-header h1 {
+      margin: 0;
+      color: var(--main-text);
+      font-size: 28px;
+      font-weight: 700;
+    }
+    
     /* Theme Toggle Button */
     .theme-toggle {
-      position: fixed;
-      top: 20px;
-      right: 20px;
-      z-index: 1000;
       background: var(--bg-card);
       border: 2px solid var(--border-color);
       border-radius: 50px;
-      padding: 10px 20px;
+      padding: 8px 16px;
       cursor: pointer;
       display: flex;
       align-items: center;
-      gap: 10px;
-      box-shadow: 0 4px 12px var(--shadow);
+      gap: 8px;
+      box-shadow: 0 2px 8px var(--shadow);
       transition: all 0.3s ease;
       color: var(--text-primary);
       font-weight: 600;
-      font-size: 14px;
+      font-size: 13px;
     }
     
     .theme-toggle:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 16px var(--shadow);
+      box-shadow: 0 4px 12px var(--shadow);
+      border-color: var(--accent-green);
     }
     
     .theme-toggle-icon {
-      font-size: 20px;
+      font-size: 18px;
     }
     
     /* Left Sidebar - Restrictions */
@@ -100,16 +140,20 @@
       background: var(--bg-card);
       border-radius: 16px;
       padding: 24px;
-      box-shadow: 0 8px 32px var(--shadow);
+      box-shadow: 0 4px 20px var(--shadow);
       overflow-y: auto;
       backdrop-filter: blur(10px);
       transition: background 0.3s ease;
+      border: 1px solid var(--border-color);
     }
     
     .sidebar h2 {
-      color: var(--accent-blue);
+      color: var(--main-text);
       margin-bottom: 20px;
-      font-size: 20px;
+      font-size: 22px;
+      font-weight: 700;
+      border-bottom: 2px solid var(--accent-green);
+      padding-bottom: 10px;
     }
     
     .profile-section {
@@ -145,7 +189,7 @@
     
     .profile-select:focus {
       outline: none;
-      border-color: var(--accent-blue);
+      border-color: var(--accent-green);
     }
     
     .btn-icon {
@@ -161,7 +205,7 @@
     
     .btn-icon:hover {
       background: var(--bg-hover);
-      border-color: var(--accent-blue);
+      border-color: var(--accent-green);
       transform: translateY(-1px);
     }
     
@@ -190,7 +234,7 @@
     
     .restrictions-section select:focus {
       outline: none;
-      border-color: var(--accent-blue);
+      border-color: var(--accent-green);
     }
     
     .checkbox-group {
@@ -224,7 +268,7 @@
       cursor: pointer;
       width: 18px;
       height: 18px;
-      accent-color: var(--accent-blue);
+      accent-color: var(--accent-green);
       flex-shrink: 0;
     }
     
@@ -238,12 +282,12 @@
       padding: 12px;
       border-radius: 8px;
       margin-top: 16px;
-      border-left: 3px solid var(--accent-blue);
+      border-left: 3px solid var(--accent-green);
       transition: background 0.3s ease;
     }
     
     .active-restrictions strong {
-      color: var(--accent-blue);
+      color: var(--accent-green);
       font-size: 12px;
       display: block;
       margin-bottom: 8px;
@@ -259,18 +303,20 @@
     }
     
     .badge-allergy {
-      background: #ffe0e0;
-      color: #d32f2f;
+      background: #FFE8E0;
+      color: #D32F2F;
+      border: 1px solid #FFB8A0;
     }
     
     .badge-restriction {
-      background: #e3f2fd;
-      color: #1976d2;
+      background: #E8F5EB;
+      color: #2E7D4E;
+      border: 1px solid #B8E0C8;
     }
     
     .save-btn {
       width: 100%;
-      background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-blue-dark) 100%);
+      background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
       color: white;
       border: none;
       padding: 12px;
@@ -288,7 +334,7 @@
     
     .meal-plan-btn {
       width: 100%;
-      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
       color: white;
       border: none;
       padding: 12px;
@@ -302,7 +348,7 @@
     
     .meal-plan-btn:hover {
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+      box-shadow: 0 4px 12px rgba(255, 140, 66, 0.3);
     }
     
     /* Main Content Area */
@@ -310,25 +356,13 @@
       background: var(--bg-card);
       border-radius: 16px;
       padding: 24px;
-      box-shadow: 0 8px 32px var(--shadow);
+      box-shadow: 0 4px 20px var(--shadow);
       overflow-y: auto;
       backdrop-filter: blur(10px);
       transition: background 0.3s ease;
+      border: 1px solid var(--border-color);
     }
     
-    .main-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 24px;
-      padding-bottom: 16px;
-      border-bottom: 2px solid var(--border-color);
-    }
-    
-    .main-header h1 {
-      color: var(--text-primary);
-      font-size: 28px;
-    }
     
     .scanner-section {
       background: var(--bg-secondary);
@@ -355,7 +389,7 @@
     }
     
     .btn-primary {
-      background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-blue-dark) 100%);
+      background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
       color: white;
     }
     
@@ -370,7 +404,7 @@
     }
     
     .btn-success {
-      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      background: linear-gradient(135deg, var(--accent-green) 0%, var(--accent-green-dark) 100%);
       color: white;
     }
     
@@ -398,7 +432,7 @@
     
     .manual-input input:focus {
       outline: none;
-      border-color: var(--accent-blue);
+      border-color: var(--accent-green);
     }
     
     .manual-input input::placeholder {
@@ -416,7 +450,7 @@
     }
     
     .product-header {
-      background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-blue-dark) 100%);
+      background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
       color: white;
       padding: 20px;
       border-radius: 12px;
@@ -477,20 +511,24 @@
       background: var(--bg-card);
       border-radius: 16px;
       padding: 20px;
-      box-shadow: 0 8px 32px var(--shadow);
+      box-shadow: 0 4px 20px var(--shadow);
       backdrop-filter: blur(10px);
       overflow-y: auto;
       max-height: calc(50vh - 30px);
       transition: background 0.3s ease;
+      border: 1px solid var(--border-color);
     }
     
     .history-panel h3, .notifications-panel h3 {
-      color: var(--accent-blue);
+      color: var(--main-text);
       margin-bottom: 16px;
       font-size: 18px;
+      font-weight: 700;
       display: flex;
       align-items: center;
       gap: 8px;
+      border-bottom: 2px solid var(--accent-green);
+      padding-bottom: 10px;
     }
     
     .notification-item, .history-item {
@@ -500,7 +538,7 @@
       margin-bottom: 10px;
       cursor: pointer;
       transition: all 0.2s;
-      border-left: 3px solid var(--accent-blue);
+      border-left: 3px solid var(--accent-green);
     }
     
     .notification-item:hover, .history-item:hover {
@@ -513,7 +551,7 @@
     }
     
     .history-item.safe {
-      border-left-color: #28a745;
+      border-left-color: var(--accent-green);
     }
     
     .history-item.unsafe {
@@ -542,7 +580,7 @@
     /* Loading Spinner */
     .loading-spinner {
       border: 4px solid rgba(74, 144, 226, 0.2);
-      border-top: 4px solid var(--accent-blue);
+      border-top: 4px solid var(--accent-green);
       border-radius: 50%;
       width: 40px;
       height: 40px;
@@ -606,7 +644,7 @@
     }
     
     .popup-content.safe h3 {
-      color: #28a745;
+      color: var(--accent-green);
     }
     
     .popup-content ul {
@@ -624,7 +662,7 @@
     }
     
     .popup-content button {
-      background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-blue-dark) 100%);
+      background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
       color: white;
       border: none;
       padding: 12px 24px;
@@ -685,11 +723,6 @@
 </head>
 <body>
   <!-- Theme Toggle Button -->
-  <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
-    <span class="theme-toggle-icon" id="themeIcon">🌙</span>
-    <span id="themeText">Dark Mode</span>
-  </button>
-  
   <div class="dashboard-container">
     <!-- Left Sidebar: Restrictions -->
     <div class="sidebar">
@@ -794,6 +827,10 @@
     <div class="main-content">
       <div class="main-header">
         <h1>🔍 Health Scanner</h1>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+          <span class="theme-toggle-icon" id="themeIcon">🌙</span>
+          <span id="themeText">Dark Mode</span>
+        </button>
       </div>
       
       <div class="scanner-section">
@@ -845,7 +882,7 @@
         <h3>📋 Checked History</h3>
         <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Items checked against restrictions</p>
         <div style="margin-bottom: 16px; display: flex; gap: 4px;">
-          <button id="showAll" class="btn" style="flex: 1; padding: 8px; font-size: 12px; background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%); color: white;">All</button>
+          <button id="showAll" class="btn" style="flex: 1; padding: 8px; font-size: 12px; background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%); color: white;">All</button>
           <button id="showSafe" class="btn btn-success" style="flex: 1; padding: 8px; font-size: 12px;">Safe</button>
           <button id="showUnsafe" class="btn" style="flex: 1; padding: 8px; font-size: 12px; background: #6c757d; color: white;">Unsafe</button>
         </div>

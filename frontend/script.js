@@ -124,7 +124,7 @@ docReady(function() {
     if (showAllBtn && showSafeBtn && showUnsafeBtn) {
         showAllBtn.addEventListener('click', () => {
             currentHistoryFilter = 'all';
-            showAllBtn.style.background = 'linear-gradient(135deg, #4a90e2 0%, #357abd 100%)';
+            showAllBtn.style.background = 'linear-gradient(135deg, #FF8C42 0%, #E67A2E 100%)';
             showAllBtn.style.color = 'white';
             showSafeBtn.style.background = '#6c757d';
             showSafeBtn.style.color = 'white';
@@ -1295,9 +1295,9 @@ function displaySimilarProductsHTML(similarProducts) {
         
         html += `
             <div style="cursor: pointer; padding: 12px; margin-bottom: 8px; background: white; 
-                        border-radius: 6px; border-left: 3px solid #4a90e2;" 
+                        border-radius: 6px; border-left: 3px solid #87BC96;"
                  onclick="checkProduct('${barcode}')">
-                <strong style="color: #4a90e2;">${productName}</strong>
+                <strong style="color: #87BC96;">${productName}</strong>
                 <div style="color: #999; font-size: 12px; margin-top: 4px;">Barcode: ${barcode}</div>
             </div>
         `;
