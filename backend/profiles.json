@@ -10,7 +10,18 @@
         "vegetarian"
       ],
       "createdAt": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "f4352797-fae1-44b2-a4f8-ec6425592b92",
+      "name": "Kai",
+      "allergies": [
+        "soy"
+      ],
+      "restrictions": [
+        "vegetarian"
+      ],
+      "createdAt": "2025-11-23T18:58:49.304075Z"
     }
   ],
-  "activeProfileId": "default"
+  "activeProfileId": "f4352797-fae1-44b2-a4f8-ec6425592b92"
 }
