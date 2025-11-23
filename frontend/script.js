@@ -100,6 +100,9 @@ docReady(function() {
         displayNotifications();
         displayHistory();
         
+        // Check if user wants to check meal plan
+        checkForMealPlanCheck();
+        
         // Update display when selections change
         allergyCheckboxes.forEach(checkbox => {
             checkbox.addEventListener('change', updateActiveRestrictionsDisplay);
@@ -1140,6 +1143,93 @@ function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
+}
+
+// Meal Plan Checking
+async function checkForMealPlanCheck() {
+    const checkMealPlan = sessionStorage.getItem('checkMealPlan');
+    if (checkMealPlan === 'true') {
+        sessionStorage.removeItem('checkMealPlan');
+        
+        const mealPlanData = sessionStorage.getItem('currentMealPlan');
+        if (mealPlanData) {
+            try {
+                const mealPlan = JSON.parse(mealPlanData);
+                await checkMealPlanAgainstRestrictions(mealPlan.text);
+            } catch (e) {
+                console.error("Error checking meal plan:", e);
+            }
+        }
+    }
+}
+
+async function checkMealPlanAgainstRestrictions(mealPlanText) {
+    try {
+        const urls = [
+            '/api/check-meal-plan',
+            'http://localhost:5000/api/check-meal-plan'
+        ];
+        
+        for (const url of urls) {
+            try {
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({mealPlan: mealPlanText})
+                });
+                
+                if (resp.ok) {
+                    const result = await resp.json();
+                    showMealPlanCheckResults(result);
+                    return;
+                }
+            } catch (e) {
+                continue;
+            }
+        }
+        alert("Error checking meal plan.");
+    } catch (e) {
+        console.error("Error checking meal plan:", e);
+        alert("Failed to check meal plan.");
+    }
+}
+
+function showMealPlanCheckResults(result) {
+    const popup = document.createElement('div');
+    popup.className = 'popup-overlay';
+    
+    if (!result.hasIssues || result.flaggedItems.length === 0) {
+        popup.innerHTML = `
+            <div class="popup-content safe">
+                <h3>✓ Meal Plan is Safe</h3>
+                <p style="color: #555;">All items in your meal plan are safe according to your dietary restrictions and allergies.</p>
+                <p style="color: #555; margin-top: 10px;">Total items checked: ${result.totalItems}</p>
+                <button class="close-popup-btn">Close</button>
+            </div>
+        `;
+    } else {
+        let flaggedList = '';
+        result.flaggedItems.forEach(item => {
+            flaggedList += `<li><strong>${escapeHtml(item.item)}</strong> - ${escapeHtml(item.issue.type)}: ${escapeHtml(item.issue.item)}</li>`;
+        });
+        
+        popup.innerHTML = `
+            <div class="popup-content">
+                <h3>⚠️ Meal Plan Issues Found</h3>
+                <p style="color: #555;">Some items in your meal plan may conflict with your restrictions:</p>
+                <ul style="margin-top: 10px; padding-left: 20px;">${flaggedList}</ul>
+                <p style="color: #555; margin-top: 10px; font-size: 12px;">Total items checked: ${result.totalItems} | Issues found: ${result.flaggedItems.length}</p>
+                <button class="close-popup-btn">Close</button>
+            </div>
+        `;
+    }
+    
+    const closeBtn = popup.querySelector('.close-popup-btn');
+    closeBtn.addEventListener('click', function() {
+        popup.remove();
+    });
+    
+    document.body.appendChild(popup);
 }
 
 // Display similar products (from previous implementation)
