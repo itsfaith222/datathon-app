@@ -43,7 +43,18 @@
         "vegetarian"
       ],
       "createdAt": "2025-11-23T17:12:06.192521Z"
+    },
+    {
+      "id": "dcad41c8-61fe-477c-a208-1381b4899d33",
+      "name": "Faith",
+      "allergies": [
+        "eggs"
+      ],
+      "restrictions": [
+        "vegan"
+      ],
+      "createdAt": "2025-11-23T17:50:44.022086Z"
     }
   ],
-  "activeProfileId": "8928ec53-1083-4c9b-a4de-71f7f851811f"
+  "activeProfileId": "dcad41c8-61fe-477c-a208-1381b4899d33"
 }

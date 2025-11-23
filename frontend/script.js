@@ -32,8 +32,8 @@ let html5QrcodeScanner = null;
 let isScanning = false;
 let currentProductData = null;
 let currentBarcode = null;
-let notifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-let scanHistory = JSON.parse(localStorage.getItem('scanHistory') || '[]');
+let notifications = JSON.parse(sessionStorage.getItem('notifications') || '[]');
+let scanHistory = JSON.parse(sessionStorage.getItem('scanHistory') || '[]');
 let currentHistoryFilter = 'all'; // 'all', 'safe', 'unsafe'
 
 // Theme Management
@@ -834,7 +834,7 @@ window.closePopup = function(btn, barcode, isSafe, flagged) {
             notifications = notifications.slice(0, 50);
         }
         
-        localStorage.setItem('notifications', JSON.stringify(notifications));
+        sessionStorage.setItem('notifications', JSON.stringify(notifications));
         displayNotifications();
     }
     
@@ -904,7 +904,7 @@ function saveToHistory(barcode, productName, imageUrl, productData, isSafe) {
         scanHistory = scanHistory.slice(0, 100);
     }
     
-    localStorage.setItem('scanHistory', JSON.stringify(scanHistory));
+    sessionStorage.setItem('scanHistory', JSON.stringify(scanHistory));
     displayHistory();
 }
 
@@ -930,7 +930,7 @@ function updateHistoryItemStatus(barcode, isSafe, flagged) {
         }
         // Note: We don't update profile info if it already exists, to preserve the original scan context
         
-        localStorage.setItem('scanHistory', JSON.stringify(scanHistory));
+        sessionStorage.setItem('scanHistory', JSON.stringify(scanHistory));
         displayHistory(); // Refresh display to show updated info
     }
 }
