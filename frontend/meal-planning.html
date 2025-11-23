@@ -1,0 +1,529 @@
+<!-- frontend/meal-planning.html -->
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Meal Planning - Health Scanner</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    /* CSS Variables for Light Mode (Default) */
+    :root {
+      --bg-primary: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --bg-card: rgba(255, 255, 255, 0.95);
+      --bg-secondary: #f8f9fa;
+      --bg-hover: #e9ecef;
+      --text-primary: #2c3e50;
+      --text-secondary: #555;
+      --text-muted: #6c757d;
+      --text-light: #999;
+      --border-color: #e0e0e0;
+      --accent-blue: #4a90e2;
+      --accent-blue-dark: #357abd;
+      --shadow: rgba(0, 0, 0, 0.1);
+      --shadow-hover: rgba(74, 144, 226, 0.3);
+    }
+    
+    /* Dark Mode Variables */
+    [data-theme="dark"] {
+      --bg-primary: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+      --bg-card: rgba(30, 30, 46, 0.95);
+      --bg-secondary: #2a2a3e;
+      --bg-hover: #3a3a4e;
+      --text-primary: #e0e0e0;
+      --text-secondary: #b0b0b0;
+      --text-muted: #888;
+      --text-light: #666;
+      --border-color: #404050;
+      --accent-blue: #5ba3f5;
+      --accent-blue-dark: #4a90e2;
+      --shadow: rgba(0, 0, 0, 0.3);
+      --shadow-hover: rgba(91, 163, 245, 0.3);
+    }
+    
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background: var(--bg-primary);
+      background-attachment: fixed;
+      min-height: 100vh;
+      padding: 20px;
+      color: var(--text-primary);
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+    }
+    
+    .header h1 {
+      color: white;
+      font-size: 32px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .back-btn {
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 2px solid var(--border-color);
+      padding: 10px 20px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .back-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px var(--shadow);
+    }
+    
+    .theme-toggle {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 1000;
+      background: var(--bg-card);
+      border: 2px solid var(--border-color);
+      border-radius: 50px;
+      padding: 10px 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 0 4px 12px var(--shadow);
+      transition: all 0.3s ease;
+      color: var(--text-primary);
+      font-weight: 600;
+      font-size: 14px;
+    }
+    
+    .theme-toggle:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px var(--shadow);
+    }
+    
+    .main-card {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 8px 32px var(--shadow);
+      margin-bottom: 20px;
+    }
+    
+    .input-section {
+      margin-bottom: 30px;
+    }
+    
+    .input-section label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+    
+    .input-section textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 15px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      resize: vertical;
+    }
+    
+    .input-section textarea:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px var(--shadow-hover);
+    }
+    
+    .generate-btn {
+      background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-blue-dark) 100%);
+      color: white;
+      border: none;
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 16px;
+      transition: transform 0.2s;
+      width: 100%;
+    }
+    
+    .generate-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px var(--shadow-hover);
+    }
+    
+    .generate-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: var(--text-secondary);
+    }
+    
+    .loading-spinner {
+      border: 3px solid var(--border-color);
+      border-top: 3px solid var(--accent-blue);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .meal-plan-result {
+      margin-top: 30px;
+      padding: 20px;
+      background: var(--bg-secondary);
+      border-radius: 8px;
+      border-left: 4px solid var(--accent-blue);
+    }
+    
+    .meal-plan-result h3 {
+      margin-bottom: 15px;
+      color: var(--accent-blue);
+    }
+    
+    .meal-day {
+      margin-bottom: 20px;
+      padding: 15px;
+      background: var(--bg-card);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+    
+    .meal-day h4 {
+      color: var(--text-primary);
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+    
+    .meal-item {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+    
+    .meal-item:last-child {
+      border-bottom: none;
+    }
+    
+    .meal-item strong {
+      color: var(--accent-blue);
+    }
+    
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-blue-dark) 100%);
+      color: white;
+    }
+    
+    .btn-success {
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      color: white;
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px var(--shadow);
+    }
+    
+    .error-message {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      border-left: 4px solid #dc3545;
+    }
+    
+    [data-theme="dark"] .error-message {
+      background: #3d1f22;
+      color: #f5c6cb;
+    }
+  </style>
+</head>
+<body>
+  <button class="theme-toggle" onclick="toggleTheme()">
+    <span id="themeIcon">🌙</span>
+    <span id="themeText">Dark Mode</span>
+  </button>
+  
+  <div class="container">
+    <div class="header">
+      <h1>🍽️ Meal Planning</h1>
+      <a href="index.html" class="back-btn">← Back to Scanner</a>
+    </div>
+    
+    <div class="main-card">
+      <div class="input-section">
+        <label for="userPrompt">Tell me about your food goals and preferences:</label>
+        <textarea 
+          id="userPrompt" 
+          placeholder="Example: I want a 7-day vegetarian meal plan for weight loss. I'm allergic to nuts and dairy. I prefer Mediterranean cuisine..."
+        ></textarea>
+      </div>
+      
+      <button id="generateBtn" class="generate-btn" onclick="generateMealPlan()">
+        Generate Meal Plan
+      </button>
+      
+      <div id="loadingIndicator" class="loading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p>Creating your personalized meal plan...</p>
+      </div>
+      
+      <div id="errorMessage" class="error-message" style="display: none;"></div>
+      
+      <div id="mealPlanResult"></div>
+    </div>
+  </div>
+  
+  <script>
+    // Theme Management
+    function initTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'light';
+      setTheme(savedTheme);
+    }
+    
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
+      
+      const themeIcon = document.getElementById('themeIcon');
+      const themeText = document.getElementById('themeText');
+      
+      if (theme === 'dark') {
+        themeIcon.textContent = '☀️';
+        themeText.textContent = 'Light Mode';
+      } else {
+        themeIcon.textContent = '🌙';
+        themeText.textContent = 'Dark Mode';
+      }
+    }
+    
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      setTheme(newTheme);
+    }
+    
+    initTheme();
+    
+    // Meal Plan Generation
+    async function generateMealPlan() {
+      const prompt = document.getElementById('userPrompt').value.trim();
+      
+      if (!prompt) {
+        showError('Please enter your food goals and preferences.');
+        return;
+      }
+      
+      const generateBtn = document.getElementById('generateBtn');
+      const loadingIndicator = document.getElementById('loadingIndicator');
+      const errorMessage = document.getElementById('errorMessage');
+      const mealPlanResult = document.getElementById('mealPlanResult');
+      
+      // Show loading, hide results
+      generateBtn.disabled = true;
+      loadingIndicator.style.display = 'block';
+      errorMessage.style.display = 'none';
+      mealPlanResult.innerHTML = '';
+      
+      try {
+        const urls = [
+          '/api/generate-meal-plan',
+          'http://localhost:5000/api/generate-meal-plan'
+        ];
+        
+        let success = false;
+        for (const url of urls) {
+          try {
+            const resp = await fetch(url, {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({prompt: prompt})
+            });
+            
+            if (resp.ok) {
+              const data = await resp.json();
+              displayMealPlan(data.mealPlan);
+              success = true;
+              break;
+            } else {
+              const error = await resp.json().catch(() => ({}));
+              throw new Error(error.error || 'Failed to generate meal plan');
+            }
+          } catch (e) {
+            if (url === urls[urls.length - 1]) {
+              throw e;
+            }
+            continue;
+          }
+        }
+      } catch (error) {
+        showError(error.message || 'Failed to generate meal plan. Please try again.');
+      } finally {
+        generateBtn.disabled = false;
+        loadingIndicator.style.display = 'none';
+      }
+    }
+    
+    function showError(message) {
+      const errorMessage = document.getElementById('errorMessage');
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+    }
+    
+    function displayMealPlan(mealPlanText) {
+      const mealPlanResult = document.getElementById('mealPlanResult');
+      
+      // Parse the meal plan text into structured format
+      // This is a simple parser - you may need to adjust based on Gemini's output format
+      const lines = mealPlanText.split('\n').filter(line => line.trim());
+      
+      let html = '<div class="meal-plan-result">';
+      html += '<h3>Your Personalized Meal Plan</h3>';
+      html += '<div class="actions">';
+      html += '<button class="btn btn-success" onclick="checkMealPlan()">Check Against Restrictions</button>';
+      html += '<button class="btn btn-primary" onclick="saveMealPlan()">Save Meal Plan</button>';
+      html += '</div>';
+      
+      // Try to parse structured format, or display as-is
+      let currentDay = '';
+      let inDay = false;
+      
+      lines.forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        
+        // Check if it's a day header
+        if (trimmed.match(/^(Day|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i)) {
+          if (currentDay) {
+            html += '</div>';
+          }
+          currentDay = trimmed;
+          html += `<div class="meal-day"><h4>${escapeHtml(trimmed)}</h4>`;
+          inDay = true;
+        } else if (trimmed.match(/^(Breakfast|Lunch|Dinner|Snack)/i)) {
+          if (inDay) {
+            html += `<div class="meal-item"><strong>${escapeHtml(trimmed)}</strong></div>`;
+          }
+        } else if (inDay && trimmed.startsWith('-') || trimmed.startsWith('•')) {
+          html += `<div class="meal-item">${escapeHtml(trimmed)}</div>`;
+        } else if (inDay) {
+          html += `<div class="meal-item">${escapeHtml(trimmed)}</div>`;
+        }
+      });
+      
+      if (currentDay) {
+        html += '</div>';
+      }
+      
+      // If no structured format found, display as formatted text
+      if (!currentDay) {
+        html += '<div style="white-space: pre-wrap; line-height: 1.6;">' + escapeHtml(mealPlanText) + '</div>';
+      }
+      
+      html += '</div>';
+      mealPlanResult.innerHTML = html;
+      
+      // Store meal plan in sessionStorage for checking
+      sessionStorage.setItem('currentMealPlan', JSON.stringify({
+        text: mealPlanText,
+        timestamp: new Date().toISOString()
+      }));
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    function checkMealPlan() {
+      // Redirect to main page with meal plan check flag
+      sessionStorage.setItem('checkMealPlan', 'true');
+      window.location.href = 'index.html';
+    }
+    
+    async function saveMealPlan() {
+      const mealPlanData = sessionStorage.getItem('currentMealPlan');
+      if (!mealPlanData) {
+        alert('No meal plan to save.');
+        return;
+      }
+      
+      try {
+        const urls = [
+          '/api/save-meal-plan',
+          'http://localhost:5000/api/save-meal-plan'
+        ];
+        
+        for (const url of urls) {
+          try {
+            const resp = await fetch(url, {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: mealPlanData
+            });
+            
+            if (resp.ok) {
+              alert('Meal plan saved successfully!');
+              return;
+            }
+          } catch (e) {
+            continue;
+          }
+        }
+        alert('Failed to save meal plan.');
+      } catch (error) {
+        alert('Error saving meal plan: ' + error.message);
+      }
+    }
+  </script>
+</body>
+</html>
+

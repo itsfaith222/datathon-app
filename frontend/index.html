@@ -286,6 +286,25 @@
       box-shadow: 0 4px 12px var(--shadow-hover);
     }
     
+    .meal-plan-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+      text-align: center;
+      font-size: 14px;
+    }
+    
+    .meal-plan-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+    }
+    
     /* Main Content Area */
     .main-content {
       background: var(--bg-card);
@@ -675,6 +694,13 @@
     <!-- Left Sidebar: Restrictions -->
     <div class="sidebar">
       <h2>⚙️ Settings</h2>
+      
+      <!-- Navigation to Meal Planning -->
+      <div style="margin-bottom: 20px;">
+        <a href="meal-planning.html" class="meal-plan-btn" style="display: block; text-decoration: none;">
+          🍽️ Meal Planning
+        </a>
+      </div>
       
       <!-- Profile Management -->
       <div class="profile-section">

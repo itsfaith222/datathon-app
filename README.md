@@ -26,15 +26,22 @@ pip install -r requirements.txt
 
 ### 2. Set Up API Keys
 
-1. Copy `.env.example` to `.env`:
+1. Create a `.env` file in the `backend/` directory:
    ```bash
-   copy .env.example .env
+   cd backend
+   # Create .env file
    ```
 
-2. Edit `.env` and add your actual API keys:
+2. Edit `.env` and add your Gemini API key:
    ```
-   API_KEY=your-actual-api-key-here
+   GEMINI_API_KEY=your-gemini-api-key-here
    ```
+   
+   To get a Gemini API key:
+   - Go to https://makersuite.google.com/app/apikey
+   - Sign in with your Google account
+   - Create a new API key
+   - Copy the key and paste it in your `.env` file
 
 ### 3. Add Your Datasets
 

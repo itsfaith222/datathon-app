@@ -10,6 +10,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROFILES_FILE = os.path.join(BASE_DIR, "profiles.json")
 PROFILE_FILE = os.path.join(BASE_DIR, "profile.json")  # Legacy file
 HISTORY_FILE = os.path.join(BASE_DIR, "history.json")
+MEAL_PLANS_FILE = os.path.join(BASE_DIR, "meal_plans.json")
 
 app = Flask(__name__, static_folder=os.path.join(BASE_DIR, "..", "frontend"), static_url_path="/")
 CORS(app)
@@ -643,6 +644,214 @@ def save_to_history():
         return jsonify({"ok": True, "items": saved_items})
     else:
         return jsonify({"error": "Failed to save history"}), 500
+
+
+# Meal Plan Management
+def load_meal_plans():
+    """Load saved meal plans from file."""
+    try:
+        if os.path.exists(MEAL_PLANS_FILE):
+            with open(MEAL_PLANS_FILE, 'r') as f:
+                return json.load(f)
+        return []
+    except Exception as e:
+        print(f"Error loading meal plans: {e}")
+        return []
+
+def save_meal_plan(meal_plan_data):
+    """Save a meal plan to file."""
+    try:
+        meal_plans = load_meal_plans()
+        meal_plans.append(meal_plan_data)
+        with open(MEAL_PLANS_FILE, 'w') as f:
+            json.dump(meal_plans, f, indent=2)
+        return True
+    except Exception as e:
+        print(f"Error saving meal plan: {e}")
+        return False
+
+@app.route("/api/generate-meal-plan", methods=["POST"])
+def generate_meal_plan():
+    """Generate a meal plan using Gemini AI."""
+    try:
+        data = request.get_json()
+        user_prompt = data.get("prompt", "")
+        
+        if not user_prompt:
+            return jsonify({"error": "Prompt is required"}), 400
+        
+        # Get user's current restrictions for context
+        profiles_data = load_profiles()
+        active_profile_id = profiles_data.get("activeProfileId")
+        active_profile = None
+        
+        if active_profile_id:
+            for profile in profiles_data.get("profiles", []):
+                if profile.get("id") == active_profile_id:
+                    active_profile = profile
+                    break
+        
+        # Build context for Gemini
+        context = f"""You are a nutritionist and meal planning expert. Create a personalized meal plan based on the user's goals and preferences.
+
+User's Request: {user_prompt}
+"""
+        
+        if active_profile:
+            allergies = active_profile.get("allergies", [])
+            restrictions = active_profile.get("restrictions", [])
+            
+            if allergies:
+                context += f"\nUser's Allergies: {', '.join(allergies)}"
+            if restrictions:
+                context += f"\nUser's Dietary Restrictions: {', '.join(restrictions)}"
+        
+        context += """
+
+Please create a detailed meal plan that:
+1. Addresses the user's goals and preferences
+2. Respects any allergies and dietary restrictions mentioned
+3. Includes breakfast, lunch, dinner, and optional snacks for each day
+4. Provides specific food items and portions
+5. Is practical and easy to follow
+
+Format the meal plan clearly with days and meals. Be specific about ingredients so they can be checked against dietary restrictions."""
+
+        # Use Gemini AI (Google Generative AI)
+        try:
+            import google.generativeai as genai
+            
+            # Get API key from environment variable
+            api_key = os.getenv("GEMINI_API_KEY")
+            if not api_key:
+                # Fallback: try to read from .env file
+                from dotenv import load_dotenv
+                load_dotenv()
+                api_key = os.getenv("GEMINI_API_KEY")
+            
+            if not api_key:
+                return jsonify({
+                    "error": "Gemini API key not found. Please set GEMINI_API_KEY environment variable."
+                }), 500
+            
+            genai.configure(api_key=api_key)
+            model = genai.GenerativeModel('gemini-pro')
+            
+            response = model.generate_content(context)
+            meal_plan_text = response.text
+            
+            return jsonify({
+                "mealPlan": meal_plan_text,
+                "success": True
+            })
+            
+        except ImportError:
+            return jsonify({
+                "error": "Google Generative AI library not installed. Run: pip install google-generativeai"
+            }), 500
+        except Exception as e:
+            return jsonify({
+                "error": f"Failed to generate meal plan: {str(e)}"
+            }), 500
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/save-meal-plan", methods=["POST"])
+def save_meal_plan_endpoint():
+    """Save a meal plan."""
+    try:
+        data = request.get_json()
+        
+        meal_plan_data = {
+            "mealPlan": data.get("text", ""),
+            "timestamp": data.get("timestamp", ""),
+            "savedAt": json.dumps({"$date": int(__import__("time").time() * 1000)})
+        }
+        
+        if save_meal_plan(meal_plan_data):
+            return jsonify({"success": True, "message": "Meal plan saved"})
+        else:
+            return jsonify({"error": "Failed to save meal plan"}), 500
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/meal-plans", methods=["GET"])
+def get_meal_plans():
+    """Get all saved meal plans."""
+    try:
+        meal_plans = load_meal_plans()
+        return jsonify({"mealPlans": meal_plans})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route("/api/check-meal-plan", methods=["POST"])
+def check_meal_plan():
+    """Check meal plan items against restrictions."""
+    try:
+        data = request.get_json()
+        meal_plan_text = data.get("mealPlan", "")
+        
+        if not meal_plan_text:
+            return jsonify({"error": "Meal plan text is required"}), 400
+        
+        # Get active profile
+        profiles_data = load_profiles()
+        active_profile_id = profiles_data.get("activeProfileId")
+        active_profile = None
+        
+        if active_profile_id:
+            for profile in profiles_data.get("profiles", []):
+                if profile.get("id") == active_profile_id:
+                    active_profile = profile
+                    break
+        
+        if not active_profile:
+            return jsonify({"error": "No active profile found"}), 400
+        
+        # Extract food items from meal plan (simple extraction)
+        # This is a basic implementation - you may want to improve the parsing
+        lines = meal_plan_text.split('\n')
+        food_items = []
+        
+        for line in lines:
+            line = line.strip()
+            # Skip headers and empty lines
+            if not line or line.startswith('Day') or line.startswith('Monday') or line.startswith('Tuesday') or line.startswith('Wednesday') or line.startswith('Thursday') or line.startswith('Friday') or line.startswith('Saturday') or line.startswith('Sunday'):
+                continue
+            # Skip meal type headers
+            if line.startswith('Breakfast') or line.startswith('Lunch') or line.startswith('Dinner') or line.startswith('Snack'):
+                continue
+            # Extract food items (lines that aren't headers)
+            if line and not line.startswith('-') and not line.startswith('•'):
+                # Try to extract food names (simple approach)
+                food_items.append(line)
+        
+        # Check each food item against restrictions
+        profile = {
+            "allergies": active_profile.get("allergies", []),
+            "restrictions": active_profile.get("restrictions", [])
+        }
+        
+        flagged_items = []
+        for item in food_items:
+            # Check if item contains restricted ingredients
+            result = check_ingredient_against_restrictions(item, profile)
+            if result:
+                flagged_items.append({
+                    "item": item,
+                    "issue": result
+                })
+        
+        return jsonify({
+            "flaggedItems": flagged_items,
+            "totalItems": len(food_items),
+            "hasIssues": len(flagged_items) > 0
+        })
+        
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == "__main__":
