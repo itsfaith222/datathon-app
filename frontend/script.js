@@ -24,6 +24,7 @@ const showAllBtn = document.getElementById("showAll");
 const showSafeBtn = document.getElementById("showSafe");
 const showUnsafeBtn = document.getElementById("showUnsafe");
 const notificationCount = document.getElementById("notificationCount");
+const clearNotificationsBtn = document.getElementById("clearNotificationsBtn");
 const themeToggle = document.getElementById("themeToggle");
 const themeIcon = document.getElementById("themeIcon");
 const themeText = document.getElementById("themeText");
@@ -868,14 +869,38 @@ function displayNotifications() {
     let html = '';
     notifications.forEach(notif => {
         html += `
-            <div class="notification-item unsafe" onclick="showNotificationProduct('${notif.barcode}')">
-                <h4>⚠️ ${escapeHtml(notif.productName)}</h4>
-                <p>${notif.flagged.length} restriction(s) found • ${new Date(notif.timestamp).toLocaleString()}</p>
+            <div class="notification-item unsafe" style="position: relative;">
+                <button onclick="deleteNotification(${notif.id}, event)" style="position: absolute; top: 5px; right: 5px; background: none; border: none; color: #666; cursor: pointer; font-size: 16px; padding: 0 5px;">&times;</button>
+                <div onclick="showNotificationProduct('${notif.barcode}')">
+                    <h4>⚠️ ${escapeHtml(notif.productName)}</h4>
+                    <p>${notif.flagged.length} restriction(s) found • ${new Date(notif.timestamp).toLocaleString()}</p>
+                </div>
             </div>
         `;
     });
 
     notificationsList.innerHTML = html;
+}
+
+// Delete single notification
+window.deleteNotification = function (id, event) {
+    if (event) {
+        event.stopPropagation();
+    }
+    notifications = notifications.filter(n => n.id !== id);
+    sessionStorage.setItem('notifications', JSON.stringify(notifications));
+    displayNotifications();
+};
+
+// Clear all notifications
+if (clearNotificationsBtn) {
+    clearNotificationsBtn.addEventListener('click', () => {
+        if (confirm('Clear all notifications?')) {
+            notifications = [];
+            sessionStorage.setItem('notifications', JSON.stringify(notifications));
+            displayNotifications();
+        }
+    });
 }
 
 // Show product from notification
