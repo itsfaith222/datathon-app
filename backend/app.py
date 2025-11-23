@@ -597,7 +597,18 @@ def check_ingredients():
     allergen_flags = check_allergens_from_product_data(product_data, profile)
     flagged.extend(allergen_flags)
     
-    # SECOND: Extract and check ingredients
+    # SECOND: Check product name against classification dataset first
+    # This allows us to trust product-level classifications even if ingredients might normally be flagged
+    product_classification = None
+    try:
+        from dataset.food_classification import get_food_classification
+        product_name = product_data.get("product_name") or product_data.get("product_name_en") or ""
+        if product_name:
+            product_classification = get_food_classification(product_name)
+    except Exception as e:
+        print(f"Error checking product classification: {e}")
+    
+    # THIRD: Extract and check ingredients
     ingredients_text = product_data.get("ingredients_text") or product_data.get("ingredients_text_en") or ""
     ingredients_list = []
     if ingredients_text:
@@ -622,7 +633,7 @@ def check_ingredients():
     
     # Check each ingredient against restrictions
     for ingredient in ingredients_list:
-        result = check_ingredient_against_restrictions(ingredient, profile)
+        result = check_ingredient_against_restrictions(ingredient, profile, product_classification)
         if result:
             # Avoid duplicates
             already_flagged = any(
@@ -867,8 +878,16 @@ def check_meal_plan():
         
         flagged_items = []
         for item in food_items:
+            # Check food item name against classification dataset first
+            item_classification = None
+            try:
+                from dataset.food_classification import get_food_classification
+                item_classification = get_food_classification(item)
+            except Exception as e:
+                print(f"Error checking item classification: {e}")
+            
             # Check if item contains restricted ingredients
-            result = check_ingredient_against_restrictions(item, profile)
+            result = check_ingredient_against_restrictions(item, profile, item_classification)
             if result:
                 flagged_items.append({
                     "item": item,
