@@ -11,11 +11,19 @@ const saveRestrictionsBtn = document.getElementById("saveRestrictions");
 const allergiesSelect = document.getElementById("allergiesSelect");
 const restrictionsSelect = document.getElementById("restrictionsSelect");
 const restrictionsStatus = document.getElementById("restrictionsStatus");
-const savedItemsList = document.getElementById("savedItemsList");
+const notificationsList = document.getElementById("notificationsList");
+const historyList = document.getElementById("historyList");
+const showSafeBtn = document.getElementById("showSafe");
+const showUnsafeBtn = document.getElementById("showUnsafe");
+const notificationCount = document.getElementById("notificationCount");
 
 let html5QrcodeScanner = null;
 let isScanning = false;
-let currentProductData = null; // Store current product for checking
+let currentProductData = null;
+let currentBarcode = null;
+let notifications = JSON.parse(localStorage.getItem('notifications') || '[]');
+let scanHistory = JSON.parse(localStorage.getItem('scanHistory') || '[]');
+let currentHistoryFilter = 'all'; // 'all', 'safe', 'unsafe'
 
 // Function to run after the DOM is ready
 function docReady(fn) {
@@ -27,100 +35,84 @@ function docReady(fn) {
 }
 
 docReady(function() {
-    const readerElementId = "reader";
-
-    function onScanSuccess(decodedText, decodedResult) {
-        if (isScanning) {
-            console.log(`Scan result: ${decodedText}`, decodedResult);
-            scanOutput.innerHTML = `<strong>Scanned Barcode:</strong> ${decodedText}`;
-            
-            // Stop scanning after successful scan
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.clear().then(() => {
-                    html5QrcodeScanner = null;
-                    isScanning = false;
-                    startBtn.disabled = false;
-                    stopBtn.disabled = true;
-                }).catch(err => {
-                    console.error("Error stopping scanner:", err);
-                });
-            }
-            
-            // Call backend API to get product name
-            checkProduct(decodedText);
-        }
-    }
-
-    function onScanError(errorMessage) {
-        // Ignore scanning errors (no barcode in frame)
-        // Only log actual errors
-        if (errorMessage && !errorMessage.includes("NotFoundException")) {
-            console.debug("Scan error:", errorMessage);
-        }
-    }
-
-    const config = {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0
-    };
-
-    startBtn.addEventListener("click", async () => {
-        if (html5QrcodeScanner) {
-            return; // Already started
-        }
-
-        startBtn.disabled = true;
-        stopBtn.disabled = false;
-        scanOutput.textContent = "Starting camera...";
-        checkOutput.textContent = "";
-
-        try {
-            html5QrcodeScanner = new Html5QrcodeScanner(
-                readerElementId,
-                config,
-                false // verbose
-            );
-            
-            isScanning = true;
-            html5QrcodeScanner.render(onScanSuccess, onScanError);
-        } catch (e) {
-            console.error("Camera start failed", e);
-            scanOutput.textContent = "Camera permission denied or no camera available.";
-            startBtn.disabled = false;
-            stopBtn.disabled = true;
-            isScanning = false;
-        }
-    });
-
-    stopBtn.addEventListener("click", async () => {
-        if (html5QrcodeScanner) {
-            try {
-                await html5QrcodeScanner.clear();
-                html5QrcodeScanner = null;
-                isScanning = false;
-                startBtn.disabled = false;
-                stopBtn.disabled = true;
-                scanOutput.textContent = "";
-                checkOutput.innerHTML = "";
-                productTableContainer.innerHTML = "";
-            } catch (err) {
-                console.error("Error stopping scanner:", err);
-            }
-        }
-    });
-});
-
-// Load saved restrictions on page load
-docReady(function() {
     loadRestrictions();
-    loadSavedItems();
     updateActiveRestrictionsDisplay();
+    displayNotifications();
+    displayHistory();
     
     // Update display when selections change
     allergiesSelect.addEventListener('change', updateActiveRestrictionsDisplay);
     restrictionsSelect.addEventListener('change', updateActiveRestrictionsDisplay);
+    
+    // History filter buttons
+    showSafeBtn.addEventListener('click', () => {
+        currentHistoryFilter = 'safe';
+        showSafeBtn.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+        showUnsafeBtn.style.background = '#6c757d';
+        displayHistory();
+    });
+    
+    showUnsafeBtn.addEventListener('click', () => {
+        currentHistoryFilter = 'unsafe';
+        showUnsafeBtn.style.background = '#dc3545';
+        showSafeBtn.style.background = '#6c757d';
+        displayHistory();
+    });
 });
+
+// Update active restrictions display
+function updateActiveRestrictionsDisplay() {
+    const allergies = Array.from(allergiesSelect.selectedOptions).map(opt => opt.value);
+    const restrictions = Array.from(restrictionsSelect.selectedOptions).map(opt => opt.value);
+    
+    const activeRestrictionsList = document.getElementById("activeRestrictionsList");
+    
+    if (allergies.length === 0 && restrictions.length === 0) {
+        activeRestrictionsList.innerHTML = "<em style='color: #999; font-size: 12px;'>No restrictions set</em>";
+        return;
+    }
+    
+    let html = "";
+    if (allergies.length > 0) {
+        html += `<div style="margin-bottom: 6px;">${allergies.map(a => `<span class="restriction-badge badge-allergy">${escapeHtml(a)}</span>`).join('')}</div>`;
+    }
+    if (restrictions.length > 0) {
+        html += `<div>${restrictions.map(r => `<span class="restriction-badge badge-restriction">${escapeHtml(r)}</span>`).join('')}</div>`;
+    }
+    
+    activeRestrictionsList.innerHTML = html;
+}
+
+// Load restrictions from backend
+async function loadRestrictions() {
+    try {
+        const urls = [
+            `/api/profile/restrictions`,
+            `http://localhost:5000/api/profile/restrictions`
+        ];
+        
+        for (const url of urls) {
+            try {
+                const resp = await fetch(url);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    Array.from(allergiesSelect.options).forEach(opt => {
+                        opt.selected = data.allergies.includes(opt.value);
+                    });
+                    Array.from(restrictionsSelect.options).forEach(opt => {
+                        opt.selected = data.restrictions.includes(opt.value);
+                    });
+                    updateActiveRestrictionsDisplay();
+            return;
+          }
+            } catch (e) {
+                continue;
+            }
+        }
+    } catch (e) {
+        console.error("Error loading restrictions:", e);
+    }
+}
 
 // Save restrictions functionality
 saveRestrictionsBtn.addEventListener("click", async () => {
@@ -142,79 +134,109 @@ saveRestrictionsBtn.addEventListener("click", async () => {
                 });
                 
                 if (resp.ok) {
-                    restrictionsStatus.innerHTML = `<span style="color: #4CAF50;">✓ Restrictions saved!</span>`;
+                    restrictionsStatus.innerHTML = "✓ Saved!";
                     updateActiveRestrictionsDisplay();
                     setTimeout(() => {
                         restrictionsStatus.innerHTML = "";
                     }, 3000);
                     return;
-                }
-            } catch (e) {
+          }
+        } catch (e) {
                 continue;
             }
         }
-        restrictionsStatus.innerHTML = `<span style="color: red;">Failed to save restrictions</span>`;
+        restrictionsStatus.innerHTML = "Failed to save";
     } catch (e) {
         console.error("Error saving restrictions:", e);
     }
 });
 
-// Update active restrictions display
-function updateActiveRestrictionsDisplay() {
-    const allergies = Array.from(allergiesSelect.selectedOptions).map(opt => opt.value);
-    const restrictions = Array.from(restrictionsSelect.selectedOptions).map(opt => opt.value);
-    
-    const activeRestrictionsList = document.getElementById("activeRestrictionsList");
-    
-    if (allergies.length === 0 && restrictions.length === 0) {
-        activeRestrictionsList.innerHTML = "<em>No restrictions set yet. Please select and save your restrictions above.</em>";
-        return;
-    }
-    
-    let html = "";
-    if (allergies.length > 0) {
-        html += `<div style="margin-bottom: 8px;"><strong style="color: #ff6b6b;">Allergies:</strong> ${allergies.map(a => `<span style="background: rgba(255, 107, 107, 0.3); padding: 3px 8px; border-radius: 3px; margin: 0 3px;">${escapeHtml(a)}</span>`).join('')}</div>`;
-    }
-    if (restrictions.length > 0) {
-        html += `<div><strong style="color: #4ecdc4;">Restrictions:</strong> ${restrictions.map(r => `<span style="background: rgba(78, 205, 196, 0.3); padding: 3px 8px; border-radius: 3px; margin: 0 3px;">${escapeHtml(r)}</span>`).join('')}</div>`;
-    }
-    
-    activeRestrictionsList.innerHTML = html;
-}
+// Scanner setup
+docReady(function() {
+    const readerElementId = "reader";
 
-// Load restrictions from backend
-async function loadRestrictions() {
-    try {
-        const urls = [
-            `/api/profile/restrictions`,
-            `http://localhost:5000/api/profile/restrictions`
-        ];
-        
-        for (const url of urls) {
+    function onScanSuccess(decodedText, decodedResult) {
+        if (isScanning) {
+            console.log(`Scan result: ${decodedText}`, decodedResult);
+            scanOutput.innerHTML = `<strong>Scanned:</strong> ${decodedText}`;
+            
+            if (html5QrcodeScanner) {
+                html5QrcodeScanner.clear().then(() => {
+                    html5QrcodeScanner = null;
+                    isScanning = false;
+                    startBtn.disabled = false;
+                    stopBtn.disabled = true;
+                }).catch(err => {
+                    console.error("Error stopping scanner:", err);
+                });
+            }
+            
+            checkProduct(decodedText);
+        }
+    }
+
+    function onScanError(errorMessage) {
+        if (errorMessage && !errorMessage.includes("NotFoundException")) {
+            console.debug("Scan error:", errorMessage);
+        }
+    }
+
+    const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+        aspectRatio: 1.0
+    };
+
+    startBtn.addEventListener("click", async () => {
+        if (html5QrcodeScanner) {
+            return;
+        }
+
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        scanOutput.textContent = "Starting camera...";
+        checkOutput.innerHTML = "";
+        productTableContainer.innerHTML = "";
+        runCheckContainer.innerHTML = "";
+
+        try {
+            html5QrcodeScanner = new Html5QrcodeScanner(
+                readerElementId,
+                config,
+                false
+            );
+            
+            isScanning = true;
+            html5QrcodeScanner.render(onScanSuccess, onScanError);
+  } catch (e) {
+    console.error("Camera start failed", e);
+    scanOutput.textContent = "Camera permission denied or no camera available.";
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+            isScanning = false;
+        }
+    });
+
+    stopBtn.addEventListener("click", async () => {
+        if (html5QrcodeScanner) {
             try {
-                const resp = await fetch(url);
-                if (resp.ok) {
-                    const data = await resp.json();
-                    // Set selected options
-                    Array.from(allergiesSelect.options).forEach(opt => {
-                        opt.selected = data.allergies.includes(opt.value);
-                    });
-                    Array.from(restrictionsSelect.options).forEach(opt => {
-                        opt.selected = data.restrictions.includes(opt.value);
-                    });
-                    updateActiveRestrictionsDisplay();
-                    return;
-                }
-            } catch (e) {
-                continue;
+                await html5QrcodeScanner.clear();
+                html5QrcodeScanner = null;
+                isScanning = false;
+  startBtn.disabled = false;
+  stopBtn.disabled = true;
+  scanOutput.textContent = "";
+                checkOutput.innerHTML = "";
+                productTableContainer.innerHTML = "";
+                runCheckContainer.innerHTML = "";
+            } catch (err) {
+                console.error("Error stopping scanner:", err);
             }
         }
-    } catch (e) {
-        console.error("Error loading restrictions:", e);
-    }
-}
+    });
+});
 
-// Manual barcode search functionality
+// Manual barcode search
 searchBarcodeBtn.addEventListener("click", () => {
     const barcode = manualBarcodeInput.value.trim();
     if (!barcode) {
@@ -222,26 +244,24 @@ searchBarcodeBtn.addEventListener("click", () => {
         return;
     }
     
-    // Clear previous results
     scanOutput.innerHTML = `<strong>Manual Entry:</strong> ${barcode}`;
     checkOutput.innerHTML = "";
     productTableContainer.innerHTML = "";
     runCheckContainer.innerHTML = "";
     
-    // Call the same checkProduct function used by scanner
     checkProduct(barcode);
 });
 
-// Allow Enter key to trigger search
 manualBarcodeInput.addEventListener("keypress", (e) => {
     if (e.key === "Enter") {
         searchBarcodeBtn.click();
     }
 });
 
-// Function to check product with backend API
+// Check product with backend API
 async function checkProduct(barcode) {
-    // Show loading indicator
+    currentBarcode = barcode;
+    
     checkOutput.innerHTML = `
         <div class="loading-container">
             <div class="loading-spinner"></div>
@@ -251,7 +271,6 @@ async function checkProduct(barcode) {
     productTableContainer.innerHTML = "";
     runCheckContainer.innerHTML = "";
     
-    // Try relative URL first (if served through Flask), then absolute URL
     const urls = [
         `/api/scan/${encodeURIComponent(barcode)}`,
         `http://localhost:5000/api/scan/${encodeURIComponent(barcode)}`
@@ -261,31 +280,20 @@ async function checkProduct(barcode) {
     
     for (const apiUrl of urls) {
         try {
-            console.log("Fetching from:", apiUrl);
-            
             const resp = await fetch(apiUrl, {
                 method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
+                headers: {'Content-Type': 'application/json'},
             });
             
             if (resp.status === 404) {
                 const errorData = await resp.json().catch(() => ({}));
                 const errorMsg = errorData.error || "i cant find it :)";
                 
-                // Clear previous content
-                productTableContainer.innerHTML = "";
+                checkOutput.innerHTML = `<div style="color: #dc3545; padding: 20px; background: #f8d7da; border-radius: 8px;">${errorMsg}</div>`;
                 
-                // Display error message and similar products
-                let errorHtml = `<span style="color:orange; font-size: 18px;">${errorMsg}</span>`;
-                
-                // Display similar products if available
                 if (errorData.similarProducts && errorData.similarProducts.length > 0) {
-                    errorHtml += displaySimilarProductsHTML(errorData.similarProducts);
+                    displaySimilarProductsHTML(errorData.similarProducts);
                 }
-                
-                checkOutput.innerHTML = errorHtml;
                 return;
             }
             
@@ -294,14 +302,10 @@ async function checkProduct(barcode) {
             }
             
             const data = await resp.json();
-            console.log("Received data:", data);
-            
-            // Store current product data for checking
             currentProductData = data;
             
-            // Display the product name with image
+            // Display product
             if (data.productName) {
-                // Get image URL from allData
                 const imageUrl = data.allData?.image_front_small_url || 
                                 data.allData?.image_small_url || 
                                 data.allData?.image_url || 
@@ -310,67 +314,54 @@ async function checkProduct(barcode) {
                 
                 let imageHtml = "";
                 if (imageUrl) {
-                    imageHtml = `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(data.productName)}" 
-                                    style="max-width: 150px; max-height: 150px; border-radius: 8px; margin-right: 20px; object-fit: contain;">`;
+                    imageHtml = `<img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(data.productName)}">`;
                 }
                 
                 checkOutput.innerHTML = `<div class="product-header">
-                    <div style="display: flex; align-items: center;">
-                        ${imageHtml}
-                        <h2 style="margin: 0; flex: 1;">${escapeHtml(data.productName)}</h2>
-                    </div>
+                    ${imageHtml}
+                    <h2>${escapeHtml(data.productName)}</h2>
                 </div>`;
                 
-                // Save to history
-                saveToHistory(barcode, data.productName, imageUrl, data.allData);
+                // Save to history (will be marked safe/unsafe after check)
+                saveToHistory(barcode, data.productName, imageUrl, data.allData, null);
                 
                 // Show Run Check button
                 runCheckContainer.innerHTML = `
-                    <button id="runCheckBtn" style="background-color: #28a745; padding: 12px 24px; font-size: 16px;">
+                    <button id="runCheckBtn" class="btn btn-success" style="width: 100%;">
                         Run Check Against Restrictions
                     </button>
                 `;
                 
-                // Add event listener for Run Check button
                 document.getElementById("runCheckBtn").addEventListener("click", () => {
                     runIngredientCheck(barcode, data.allData);
                 });
-            } else {
-                checkOutput.innerHTML = `<span style="color:orange">Product found but no name available.</span>`;
             }
             
-            // Display ingredients list instead of full table
+            // Display ingredients
             if (data.ingredients && data.ingredients.length > 0) {
                 displayIngredientsList(data.ingredients);
             } else if (data.allData) {
-                // Fallback: try to extract ingredients from allData
                 const ingredients = extractIngredientsFromData(data.allData);
                 if (ingredients.length > 0) {
                     displayIngredientsList(ingredients);
                 }
             }
             
-            return; // Success, exit function
+            return;
         } catch (e) {
             console.error(`Fetch error for ${apiUrl}:`, e);
             lastError = e;
-            // Try next URL
             continue;
         }
     }
     
-    // If we get here, both URLs failed
-    checkOutput.innerHTML = `<div style="color: red;">Error checking product: ${lastError.message}<br>` +
-        `<small>Make sure the Flask backend is running on http://localhost:5000<br>` +
-        `Run: <code>cd backend && python app.py</code></small></div>`;
-    productTableContainer.innerHTML = "";
+    checkOutput.innerHTML = `<div style="color: #dc3545; padding: 20px;">Error: ${lastError.message}</div>`;
 }
 
 // Extract ingredients from product data
 function extractIngredientsFromData(productData) {
     let ingredients = [];
     
-    // Try ingredients_text
     const ingredientsText = productData.ingredients_text || productData.ingredients_text_en || "";
     if (ingredientsText) {
         ingredients = String(ingredientsText).split(",")
@@ -378,7 +369,6 @@ function extractIngredientsFromData(productData) {
             .filter(ing => ing.length > 0);
     }
     
-    // Try ingredients array
     if (ingredients.length === 0 && productData.ingredients) {
         const ingredientsArray = productData.ingredients;
         if (Array.isArray(ingredientsArray)) {
@@ -409,83 +399,12 @@ function displayIngredientsList(ingredients) {
         html += `<li>${escapeHtml(String(ingredient))}</li>`;
     });
     
-    html += `
-            </ul>
-        </div>
-    `;
-    
+    html += `</ul></div>`;
     productTableContainer.innerHTML = html;
 }
 
-// Function to display product information in a table (kept for reference, not used)
-function displayProductTable(productData) {
-    if (!productData || typeof productData !== 'object') {
-        productTableContainer.innerHTML = "";
-        return;
-    }
-    
-    // Filter out null, undefined, and empty values, and sort by key
-    const entries = Object.entries(productData)
-        .filter(([key, value]) => value !== null && value !== undefined && value !== '')
-        .sort(([a], [b]) => a.localeCompare(b));
-    
-    if (entries.length === 0) {
-        productTableContainer.innerHTML = "<p>No additional product information available.</p>";
-        return;
-    }
-    
-    // Create table HTML
-    let tableHTML = `
-        <table class="product-table">
-            <thead>
-                <tr>
-                    <th>Field</th>
-                    <th>Value</th>
-                </tr>
-            </thead>
-            <tbody>
-    `;
-    
-    entries.forEach(([key, value]) => {
-        // Format the field name (replace underscores with spaces, capitalize)
-        const formattedKey = key
-            .replace(/_/g, ' ')
-            .replace(/\b\w/g, l => l.toUpperCase());
-        
-        // Format the value
-        let formattedValue = value;
-        if (typeof value === 'object') {
-            formattedValue = JSON.stringify(value, null, 2);
-        } else if (typeof value === 'string' && value.length > 200) {
-            formattedValue = value.substring(0, 200) + '...';
-        }
-        
-        tableHTML += `
-            <tr>
-                <td class="field-name">${escapeHtml(formattedKey)}</td>
-                <td class="field-value">${escapeHtml(String(formattedValue))}</td>
-            </tr>
-        `;
-    });
-    
-    tableHTML += `
-            </tbody>
-        </table>
-    `;
-    
-    productTableContainer.innerHTML = tableHTML;
-}
-
-// Helper function to escape HTML
-function escapeHtml(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-}
-
-// Run ingredient check against restrictions
+// Run ingredient check
 async function runIngredientCheck(barcode, productData) {
-    // Show loading indicator
     const runCheckBtn = document.getElementById("runCheckBtn");
     if (runCheckBtn) {
         runCheckBtn.disabled = true;
@@ -493,25 +412,19 @@ async function runIngredientCheck(barcode, productData) {
     }
     
     try {
-        const urls = [
-            `/api/check`,
-            `http://localhost:5000/api/check`
-        ];
+        const urls = [`/api/check`, `http://localhost:5000/api/check`];
         
         for (const url of urls) {
             try {
                 const resp = await fetch(url, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        barcode: barcode,
-                        productData: productData
-                    })
+                    body: JSON.stringify({barcode, productData})
                 });
                 
                 if (resp.ok) {
                     const result = await resp.json();
-                    showCheckResults(result);
+                    showCheckResults(result, barcode);
                     if (runCheckBtn) {
                         runCheckBtn.disabled = false;
                         runCheckBtn.innerHTML = "Run Check Against Restrictions";
@@ -522,209 +435,222 @@ async function runIngredientCheck(barcode, productData) {
                 continue;
             }
         }
-        alert("Error checking ingredients. Make sure backend is running.");
+        alert("Error checking ingredients.");
         if (runCheckBtn) {
             runCheckBtn.disabled = false;
             runCheckBtn.innerHTML = "Run Check Against Restrictions";
         }
     } catch (e) {
         console.error("Error running check:", e);
-        alert("Error checking ingredients.");
-        if (runCheckBtn) {
-            runCheckBtn.disabled = false;
-            runCheckBtn.innerHTML = "Run Check Against Restrictions";
-        }
     }
 }
 
 // Show check results in popup
-function showCheckResults(result) {
-    if (!result.hasIssues || result.flagged.length === 0) {
-        // Show success message
-        const popup = document.createElement('div');
-        popup.className = 'popup-overlay';
-        popup.innerHTML = `
-            <div class="popup-content" style="border-color: #4CAF50;">
-                <h3 style="color: #4CAF50;">✓ Safe to Consume</h3>
-                <p style="color: white;">No dietary restrictions or allergies found in this product.</p>
-                <button onclick="this.closest('.popup-overlay').remove()" 
-                        style="background-color: #4CAF50; padding: 10px 20px; margin-top: 15px;">
-                    Close
-                </button>
-            </div>
-        `;
-        document.body.appendChild(popup);
-        return;
-    }
+function showCheckResults(result, barcode) {
+    const productName = currentProductData?.productName || "Unknown Product";
+    const isSafe = !result.hasIssues || result.flagged.length === 0;
     
-    // Show warning popup
+    // Update history with safe/unsafe status
+    updateHistoryItemStatus(barcode, isSafe, result.flagged);
+    
     const popup = document.createElement('div');
     popup.className = 'popup-overlay';
     
-    let flaggedList = '';
-    result.flagged.forEach(item => {
-        flaggedList += `<li><strong>${escapeHtml(item.ingredient)}</strong> - ${escapeHtml(item.type)}: ${escapeHtml(item.item)}</li>`;
-    });
+    if (isSafe) {
+        popup.innerHTML = `
+            <div class="popup-content safe">
+                <h3>✓ Safe to Consume</h3>
+                <p style="color: #555;">No dietary restrictions or allergies found in this product.</p>
+                <button onclick="closePopup(this, '${barcode}', true, [])">Close</button>
+            </div>
+        `;
+    } else {
+        let flaggedList = '';
+        result.flagged.forEach(item => {
+            flaggedList += `<li><strong>${escapeHtml(item.ingredient)}</strong> - ${escapeHtml(item.type)}: ${escapeHtml(item.item)}</li>`;
+        });
+        
+        popup.innerHTML = `
+            <div class="popup-content">
+                <h3>⚠️ Dietary Restriction Alert</h3>
+                <p style="color: #555;">This product contains ingredients that match your restrictions:</p>
+                <ul>${flaggedList}</ul>
+                <button onclick="closePopup(this, '${barcode}', false, ${JSON.stringify(result.flagged)})">Close</button>
+            </div>
+        `;
+    }
     
-    popup.innerHTML = `
-        <div class="popup-content">
-            <h3>⚠️ Dietary Restriction Alert</h3>
-            <p style="color: white;">This product contains ingredients that match your restrictions:</p>
-            <ul>
-                ${flaggedList}
-            </ul>
-            <button onclick="this.closest('.popup-overlay').remove()" 
-                    style="background-color: #ff4444; padding: 10px 20px; margin-top: 15px;">
-                Dismiss
-            </button>
-        </div>
-    `;
     document.body.appendChild(popup);
 }
 
-// Save item to history
-async function saveToHistory(barcode, productName, imageUrl, productData) {
-    try {
-        const urls = [
-            `/api/history`,
-            `http://localhost:5000/api/history`
-        ];
+// Close popup and save to notifications
+window.closePopup = function(btn, barcode, isSafe, flagged) {
+    const popup = btn.closest('.popup-overlay');
+    if (popup) {
+        popup.remove();
+    }
+    
+    // Save to notifications if unsafe
+    if (!isSafe) {
+        const productName = currentProductData?.productName || "Unknown Product";
+        const notification = {
+            id: Date.now(),
+            barcode: barcode,
+            productName: productName,
+            timestamp: new Date().toISOString(),
+            flagged: flagged
+        };
         
-        for (const url of urls) {
-            try {
-                const resp = await fetch(url, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        barcode: barcode,
-                        productName: productName,
-                        imageUrl: imageUrl,
-                        productData: productData
-                    })
-                });
-                
-                if (resp.ok) {
-                    const data = await resp.json();
-                    loadSavedItems();
-                    return;
-                }
-            } catch (e) {
-                continue;
-            }
+        notifications.unshift(notification);
+        // Keep only last 50 notifications
+        if (notifications.length > 50) {
+            notifications = notifications.slice(0, 50);
         }
-    } catch (e) {
-        console.error("Error saving to history:", e);
+        
+        localStorage.setItem('notifications', JSON.stringify(notifications));
+        displayNotifications();
+    }
+    
+    // Update history display
+    displayHistory();
+};
+
+// Display notifications
+function displayNotifications() {
+    if (!notifications || notifications.length === 0) {
+        notificationsList.innerHTML = '<div class="empty-state">No notifications yet</div>';
+        notificationCount.style.display = 'none';
+        return;
+    }
+    
+    notificationCount.textContent = notifications.length;
+    notificationCount.style.display = 'inline-block';
+    
+    let html = '';
+    notifications.forEach(notif => {
+        html += `
+            <div class="notification-item unsafe" onclick="showNotificationProduct('${notif.barcode}')">
+                <h4>⚠️ ${escapeHtml(notif.productName)}</h4>
+                <p>${notif.flagged.length} restriction(s) found • ${new Date(notif.timestamp).toLocaleString()}</p>
+            </div>
+        `;
+    });
+    
+    notificationsList.innerHTML = html;
+}
+
+// Show product from notification
+window.showNotificationProduct = function(barcode) {
+    checkProduct(barcode);
+    // Scroll to top
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+// Save to history
+function saveToHistory(barcode, productName, imageUrl, productData, isSafe) {
+    // Remove existing entry with same barcode
+    scanHistory = scanHistory.filter(item => item.barcode !== barcode);
+    
+    const historyItem = {
+        barcode: barcode,
+        productName: productName,
+        imageUrl: imageUrl,
+        productData: productData,
+        isSafe: isSafe,
+        timestamp: new Date().toISOString()
+    };
+    
+    scanHistory.unshift(historyItem);
+    
+    // Keep only last 100 items
+    if (scanHistory.length > 100) {
+        scanHistory = scanHistory.slice(0, 100);
+    }
+    
+    localStorage.setItem('scanHistory', JSON.stringify(scanHistory));
+    displayHistory();
+}
+
+// Update history item status
+function updateHistoryItemStatus(barcode, isSafe, flagged) {
+    const item = scanHistory.find(h => h.barcode === barcode);
+    if (item) {
+        item.isSafe = isSafe;
+        item.flagged = flagged;
+        item.checkedAt = new Date().toISOString();
+        localStorage.setItem('scanHistory', JSON.stringify(scanHistory));
     }
 }
 
-// Load and display saved items
-async function loadSavedItems() {
-    try {
-        const urls = [
-            `/api/history`,
-            `http://localhost:5000/api/history`
-        ];
-        
-        for (const url of urls) {
-            try {
-                const resp = await fetch(url);
-                if (resp.ok) {
-                    const data = await resp.json();
-                    displaySavedItems(data.items || []);
-                    return;
-                }
-            } catch (e) {
-                continue;
-            }
-        }
-        savedItemsList.innerHTML = "<p style='color: #ccc; font-size: 12px;'>No recent scans</p>";
-    } catch (e) {
-        console.error("Error loading saved items:", e);
+// Display history
+function displayHistory() {
+    let filteredHistory = scanHistory;
+    
+    if (currentHistoryFilter === 'safe') {
+        filteredHistory = scanHistory.filter(item => item.isSafe === true);
+    } else if (currentHistoryFilter === 'unsafe') {
+        filteredHistory = scanHistory.filter(item => item.isSafe === false);
     }
-}
-
-// Display saved items in sidebar
-function displaySavedItems(items) {
-    if (!items || items.length === 0) {
-        savedItemsList.innerHTML = "<p style='color: #ccc; font-size: 12px;'>No recent scans</p>";
+    
+    if (!filteredHistory || filteredHistory.length === 0) {
+        historyList.innerHTML = '<div class="empty-state">No scan history yet</div>';
         return;
     }
     
     let html = '';
-    items.forEach(item => {
-        const imageUrl = item.imageUrl || '';
-        const productName = escapeHtml(item.productName || 'Unknown Product');
-        const barcode = escapeHtml(item.barcode || '');
+    filteredHistory.forEach(item => {
+        const statusClass = item.isSafe ? 'safe' : 'unsafe';
+        const statusBadge = item.isSafe ? 
+            '<span class="status-badge status-safe">Safe</span>' : 
+            '<span class="status-badge status-unsafe">Unsafe</span>';
         
         html += `
-            <div class="saved-item-card">
-                ${imageUrl ? `<img src="${escapeHtml(imageUrl)}" alt="${productName}">` : ''}
-                <div class="item-name">${productName}</div>
-                <button onclick="rerunCheck('${barcode}')" 
-                        style="width: 100%; padding: 5px; font-size: 12px; background-color: #28a745;">
-                    Re-run Check
-                </button>
+            <div class="history-item ${statusClass}" onclick="showHistoryProduct('${item.barcode}')">
+                <h4>${escapeHtml(item.productName)} ${statusBadge}</h4>
+                <p>${new Date(item.timestamp).toLocaleString()}</p>
             </div>
         `;
     });
     
-    savedItemsList.innerHTML = html;
+    historyList.innerHTML = html;
 }
 
-// Re-run check for saved item (global function for onclick)
-window.rerunCheck = async function(barcode) {
-    // Clear previous results
-    checkOutput.innerHTML = "";
-    productTableContainer.innerHTML = "";
-    runCheckContainer.innerHTML = "";
-    scanOutput.innerHTML = `<strong>Re-checking:</strong> ${barcode}`;
-    
-    // Fetch product and check
-    await checkProduct(barcode);
-    
-    // If we have the product data, run the check
-    if (currentProductData && currentProductData.allData) {
-        setTimeout(() => {
-            runIngredientCheck(barcode, currentProductData.allData);
-        }, 500);
-    }
+// Show product from history
+window.showHistoryProduct = function(barcode) {
+    checkProduct(barcode);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+};
+
+// Helper function to escape HTML
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
-// Function to generate HTML for similar products
+// Display similar products (from previous implementation)
 function displaySimilarProductsHTML(similarProducts) {
     if (!similarProducts || similarProducts.length === 0) {
         return "";
     }
     
-    let html = `
-        <div class="similar-products-container" style="margin-top: 20px; padding: 20px; background: rgba(255, 255, 255, 0.1); border-radius: 8px;">
-            <h3 style="color: white; margin-bottom: 15px;">Similar Products Found:</h3>
-            <div class="similar-products-list">
-    `;
+    let html = `<div style="margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+        <h4 style="color: #2c3e50; margin-bottom: 15px;">Similar Products Found:</h4>`;
     
     similarProducts.forEach((product) => {
         const productName = escapeHtml(product.productName || "Unknown Product");
         const barcode = escapeHtml(product.barcode);
-        const brand = product.brands ? escapeHtml(product.brands) : "";
         
         html += `
-            <div class="similar-product-item" onclick="checkProduct('${barcode}')" 
-                 style="cursor: pointer; padding: 15px; margin-bottom: 10px; background: rgba(255, 255, 255, 0.15); 
-                        border-radius: 5px; border: 1px solid rgba(255, 255, 255, 0.2); 
-                        transition: background 0.2s;">
-                <div style="font-weight: bold; color: #4CAF50; font-size: 16px;">${productName}</div>
-                <div style="color: #ccc; font-size: 14px; margin-top: 5px;">
-                    Barcode: ${barcode}
-                    ${brand ? `<br>Brand: ${brand}` : ''}
-                </div>
+            <div style="cursor: pointer; padding: 12px; margin-bottom: 8px; background: white; 
+                        border-radius: 6px; border-left: 3px solid #4a90e2;" 
+                 onclick="checkProduct('${barcode}')">
+                <strong style="color: #4a90e2;">${productName}</strong>
+                <div style="color: #999; font-size: 12px; margin-top: 4px;">Barcode: ${barcode}</div>
             </div>
         `;
     });
     
-    html += `
-            </div>
-        </div>
-    `;
-    
-    return html;
+    html += `</div>`;
+    productTableContainer.innerHTML = html;
 }
