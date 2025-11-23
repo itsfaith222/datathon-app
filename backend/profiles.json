@@ -20,8 +20,13 @@
         "wheat"
       ],
       "restrictions": [
+<<<<<<< HEAD
+        "vegetarian",
+        "halal"
+=======
         "vegan",
         "vegetarian"
+>>>>>>> bb64cb6fe456aeb6af5b13aa1ba1fe901d4221e5
       ],
       "createdAt": "2025-11-23T17:11:15.622951Z"
     },

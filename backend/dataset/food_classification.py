@@ -129,8 +129,14 @@ def get_food_classification(food_name: str) -> Optional[dict]:
                             if keyword == 'gluten':
                                 key = 'gluten-free'
                             
-                            # Normalize value (handle boolean, "Yes"/"No", 1/0)
+                            # Normalize value (handle boolean, "Yes"/"No", 1/0, None/NaN)
                             val = match[col]
+                            
+                            # Check if value is missing/NaN
+                            if pd.isna(val) or val is None:
+                                # Skip this classification - don't assume False
+                                continue
+                            
                             is_compliant = False
                             
                             if isinstance(val, bool):
@@ -139,6 +145,9 @@ def get_food_classification(food_name: str) -> Optional[dict]:
                                 is_compliant = bool(val)
                             elif isinstance(val, str):
                                 val_lower = val.lower().strip()
+                                if val_lower in ['', 'na', 'n/a', 'none', 'null']:
+                                    # Skip missing string values
+                                    continue
                                 is_compliant = val_lower in ['yes', 'true', '1', 'y']
                             
                             # Special handling for "gluten" column which usually means "contains gluten"
@@ -148,7 +157,7 @@ def get_food_classification(food_name: str) -> Optional[dict]:
                             else:
                                 classification[key] = is_compliant
                                 
-                return classification
+                return classification if classification else None
                         
     except Exception as e:
         print(f"Error searching food classification: {e}")
