@@ -5,16 +5,15 @@ A full-stack web application built for the Datathon hackathon.
 ## Project Structure
 
 ```
-NvPmf/
-├── backend/          # Python Flask backend
-│   ├── app.py       # Main Flask application
-│   ├── requirements.txt
-│   └── README.md
-├── frontend/        # Node.js frontend
-│   ├── server.js    # Express server
-│   ├── package.json
-│   └── public/      # Static files (HTML, CSS, JS)
-└── datasets/        # Data files
+backend/          # Python Flask backend
+├── app.py       # Main Flask application
+├── requirements.txt
+└── README.md
+frontend/        # Node.js frontend
+├── server.js    # Express server
+├── package.json
+└── public/      # Static files (HTML, CSS, JS)
+datasets/        # Data files
 ```
 
 ## Quick Start
