@@ -1,0 +1,6 @@
+# Uncomment lines below
+# Ignore virtual environment
+venv/
+
+# Ignore secrets folder
+keys/

@@ -4,7 +4,7 @@ from flask_cors import CORS
 import os
 import requests
 import json
-from dataset_loader import check_ingredient_against_restrictions
+from dataset.ingredient_checker import check_ingredient_against_restrictions
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 PROFILES_FILE = os.path.join(BASE_DIR, "profiles.json")

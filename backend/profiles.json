@@ -7,47 +7,10 @@
         "soy"
       ],
       "restrictions": [
-        "gluten-free"
+        "vegetarian"
       ],
       "createdAt": "2024-01-01T00:00:00Z"
-    },
-    {
-      "id": "8928ec53-1083-4c9b-a4de-71f7f851811f",
-      "name": "Kai",
-      "allergies": [
-        "milk"
-      ],
-      "restrictions": [
-        "vegan",
-        "vegetarian"
-      ],
-      "createdAt": "2025-11-23T17:11:15.622951Z"
-    },
-    {
-      "id": "ce9fdcb0-9b12-45d8-ac98-db039262ca2a",
-      "name": "Sam",
-      "allergies": [
-        "peanuts",
-        "wheat"
-      ],
-      "restrictions": [
-        "vegetarian",
-        "gluten-free"
-      ],
-      "createdAt": "2025-11-23T17:12:06.192521Z"
-    },
-    {
-      "id": "4986fe62-fb92-405f-8dae-cde042d2c6be",
-      "name": "Rhea",
-      "allergies": [
-        "wheat"
-      ],
-      "restrictions": [
-        "vegan",
-        "vegetarian"
-      ],
-      "createdAt": "2025-11-23T18:01:14.614016Z"
     }
   ],
-  "activeProfileId": "4986fe62-fb92-405f-8dae-cde042d2c6be"
+  "activeProfileId": "default"
 }
