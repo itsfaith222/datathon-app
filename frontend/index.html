@@ -805,16 +805,26 @@
         </div>
       </div>
       
-      <!-- History Panel -->
+      <!-- Scanned Items Panel -->
       <div class="history-panel">
-        <h3>📋 Scan History</h3>
+        <h3>📦 Scanned Items</h3>
+        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Items scanned but not yet checked</p>
+        <div id="scannedItemsList">
+          <div class="empty-state">No scanned items yet</div>
+        </div>
+      </div>
+      
+      <!-- History Panel -->
+      <div class="history-panel" style="margin-top: 20px;">
+        <h3>📋 Checked History</h3>
+        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Items checked against restrictions</p>
         <div style="margin-bottom: 16px; display: flex; gap: 4px;">
           <button id="showAll" class="btn" style="flex: 1; padding: 8px; font-size: 12px; background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%); color: white;">All</button>
           <button id="showSafe" class="btn btn-success" style="flex: 1; padding: 8px; font-size: 12px;">Safe</button>
           <button id="showUnsafe" class="btn" style="flex: 1; padding: 8px; font-size: 12px; background: #6c757d; color: white;">Unsafe</button>
         </div>
         <div id="historyList">
-          <div class="empty-state">No scan history yet</div>
+          <div class="empty-state">No check history yet</div>
         </div>
       </div>
     </div>

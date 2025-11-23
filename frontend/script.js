@@ -33,7 +33,8 @@ let isScanning = false;
 let currentProductData = null;
 let currentBarcode = null;
 let notifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-let scanHistory = JSON.parse(localStorage.getItem('scanHistory') || '[]');
+let scannedItems = JSON.parse(localStorage.getItem('scannedItems') || '[]'); // Items that were scanned but not checked
+let scanHistory = JSON.parse(localStorage.getItem('scanHistory') || '[]'); // Items that have been checked against restrictions
 let currentHistoryFilter = 'all'; // 'all', 'safe', 'unsafe'
 
 // Theme Management
@@ -97,6 +98,7 @@ docReady(function() {
         
         updateActiveRestrictionsDisplay();
         displayNotifications();
+        displayScannedItems();
         displayHistory();
         
         // Update display when selections change
@@ -637,8 +639,8 @@ async function checkProduct(barcode) {
                     <h2>${escapeHtml(data.productName)}</h2>
                 </div>`;
                 
-                // Save to history (will be marked safe/unsafe after check)
-                saveToHistory(barcode, data.productName, imageUrl, data.allData, null);
+                // Save to scanned items (will be moved to history after check)
+                saveScannedItem(barcode, data.productName, imageUrl, data.allData);
                 
                 // Show Run Check button
                 runCheckContainer.innerHTML = `
@@ -873,9 +875,37 @@ window.showNotificationProduct = function(barcode) {
     window.scrollTo({ top: 0, behavior: 'smooth' });
 };
 
-// Save to history
+// Save scanned item (when first scanned, before checking)
+function saveScannedItem(barcode, productName, imageUrl, productData) {
+    // Remove existing entry with same barcode from scanned items
+    scannedItems = scannedItems.filter(item => item.barcode !== barcode);
+    
+    const scannedItem = {
+        barcode: barcode,
+        productName: productName,
+        imageUrl: imageUrl,
+        productData: productData,
+        timestamp: new Date().toISOString()
+    };
+    
+    scannedItems.unshift(scannedItem);
+    
+    // Keep only last 100 scanned items
+    if (scannedItems.length > 100) {
+        scannedItems = scannedItems.slice(0, 100);
+    }
+    
+    localStorage.setItem('scannedItems', JSON.stringify(scannedItems));
+    displayScannedItems();
+}
+
+// Save to history (when item is checked against restrictions)
 function saveToHistory(barcode, productName, imageUrl, productData, isSafe) {
-    // Remove existing entry with same barcode
+    // Remove from scanned items if it exists there
+    scannedItems = scannedItems.filter(item => item.barcode !== barcode);
+    localStorage.setItem('scannedItems', JSON.stringify(scannedItems));
+    
+    // Remove existing entry with same barcode from history
     scanHistory = scanHistory.filter(item => item.barcode !== barcode);
     
     // Get current profile info
@@ -905,11 +935,57 @@ function saveToHistory(barcode, productName, imageUrl, productData, isSafe) {
     }
     
     localStorage.setItem('scanHistory', JSON.stringify(scanHistory));
+    displayScannedItems(); // Update scanned items display
     displayHistory();
 }
 
-// Update history item status
+// Update history item status (moves from scannedItems to scanHistory if needed)
 function updateHistoryItemStatus(barcode, isSafe, flagged) {
+    // Check if item is in scannedItems and needs to be moved to history
+    const scannedItem = scannedItems.find(h => h.barcode === barcode);
+    if (scannedItem) {
+        // Move from scannedItems to scanHistory
+        scannedItems = scannedItems.filter(item => item.barcode !== barcode);
+        localStorage.setItem('scannedItems', JSON.stringify(scannedItems));
+        
+        // Get current profile info
+        const currentProfile = profiles.find(p => p.id === currentProfileId);
+        const profileName = currentProfile?.name || "Unknown Profile";
+        const profileAllergies = currentProfile?.allergies || [];
+        const profileRestrictions = currentProfile?.restrictions || [];
+        
+        // Create history item from scanned item
+        const historyItem = {
+            barcode: scannedItem.barcode,
+            productName: scannedItem.productName,
+            imageUrl: scannedItem.imageUrl,
+            productData: scannedItem.productData,
+            isSafe: isSafe,
+            flagged: flagged,
+            timestamp: scannedItem.timestamp, // Keep original scan timestamp
+            checkedAt: new Date().toISOString(),
+            profileId: currentProfileId,
+            profileName: profileName,
+            profileAllergies: [...profileAllergies],
+            profileRestrictions: [...profileRestrictions]
+        };
+        
+        // Remove existing entry with same barcode from history
+        scanHistory = scanHistory.filter(item => item.barcode !== barcode);
+        scanHistory.unshift(historyItem);
+        
+        // Keep only last 100 items
+        if (scanHistory.length > 100) {
+            scanHistory = scanHistory.slice(0, 100);
+        }
+        
+        localStorage.setItem('scanHistory', JSON.stringify(scanHistory));
+        displayScannedItems(); // Update scanned items display
+        displayHistory(); // Refresh display to show updated info
+        return;
+    }
+    
+    // Item already in history, just update it
     const item = scanHistory.find(h => h.barcode === barcode);
     if (item) {
         item.isSafe = isSafe;
@@ -935,6 +1011,29 @@ function updateHistoryItemStatus(barcode, isSafe, flagged) {
     }
 }
 
+// Display scanned items (not yet checked)
+function displayScannedItems() {
+    if (!scannedItemsList) return;
+    
+    if (!scannedItems || scannedItems.length === 0) {
+        scannedItemsList.innerHTML = '<div class="empty-state">No scanned items yet</div>';
+        return;
+    }
+    
+    let html = '';
+    scannedItems.forEach(item => {
+        html += `
+            <div class="history-item" onclick="checkProduct('${item.barcode}')" style="cursor: pointer; border-left-color: #6c757d;">
+                <h4>${escapeHtml(item.productName)}</h4>
+                <p style="font-size: 11px; color: var(--text-muted);">${new Date(item.timestamp).toLocaleString()}</p>
+                <p style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">Click to check against restrictions</p>
+            </div>
+        `;
+    });
+    
+    scannedItemsList.innerHTML = html;
+}
+
 // Display history
 function displayHistory() {
     let filteredHistory = scanHistory;
@@ -946,7 +1045,7 @@ function displayHistory() {
     }
     
     if (!filteredHistory || filteredHistory.length === 0) {
-        historyList.innerHTML = '<div class="empty-state">No scan history yet</div>';
+        historyList.innerHTML = '<div class="empty-state">No checked items yet</div>';
         return;
     }
     
