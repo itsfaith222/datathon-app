@@ -12,6 +12,8 @@ from typing import Optional
 _food_classification_dataset = None
 
 
+import os
+
 def load_food_classification_dataset() -> Optional[pd.DataFrame]:
     """
     Load food classification dataset from Kaggle.
@@ -25,14 +27,44 @@ def load_food_classification_dataset() -> Optional[pd.DataFrame]:
         return _food_classification_dataset
     
     try:
-        print("Loading food classification dataset...")
-        df = kagglehub.load_dataset(
-            KaggleDatasetAdapter.PANDAS,
-            "theriley106/foodclassification",
-            "",
-        )
-        _food_classification_dataset = df
+        print("Loading food classification dataset (theriley106/foodclassification)...")
+        # Download the dataset
+        path = kagglehub.dataset_download("theriley106/foodclassification")
+        print(f"Dataset downloaded to: {path}")
+        
+        # Find the JSON file
+        json_file = None
+        for root, dirs, files in os.walk(path):
+            for file in files:
+                if file.endswith(".json"):
+                    json_file = os.path.join(root, file)
+                    break
+            if json_file:
+                break
+        
+        if not json_file:
+            print("No JSON file found in the dataset.")
+            return None
+            
+        import json
+        with open(json_file, 'r') as f:
+            data = json.load(f)
+            
+        # Convert dictionary to DataFrame
+        # Structure: {'FoodName': {'Vegan': True, ...}, ...}
+        df = pd.DataFrame.from_dict(data, orient='index')
+        
+        # Make the index (food name) a column
+        df.reset_index(inplace=True)
+        df.rename(columns={'index': 'food_name'}, inplace=True)
+        
+        # Normalize column names
+        df.columns = [str(c).lower().strip() for c in df.columns]
+        
         print(f"Food classification dataset loaded. Shape: {df.shape}")
+        print(f"Columns: {df.columns.tolist()}")
+        
+        _food_classification_dataset = df
         return df
     except Exception as e:
         print(f"Error loading food classification dataset: {e}")

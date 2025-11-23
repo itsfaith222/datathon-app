@@ -497,74 +497,64 @@ def check_allergens_from_product_data(product_data, profile):
     if not user_allergies:
         return flagged
     
-    # Check allergens_tags (most reliable - array format)
-    allergens_tags = product_data.get("allergens_tags", [])
-    if isinstance(allergens_tags, list):
-        for allergen_tag in allergens_tags:
-            # Open Food Facts format: "en:milk" -> extract "milk"
-            # Remove language prefixes and common separators
-            allergen_name = allergen_tag
-            for prefix in ["en:", "fr:", "de:", "es:", "it:", "pt:"]:
-                allergen_name = allergen_name.replace(prefix, "")
-            allergen_name = allergen_name.replace("-", " ").replace("_", " ").strip()
-            allergen_lower = allergen_name.lower()
+    # Helper to clean and check a single allergen string
+    def check_and_add(allergen_raw, source):
+        if not allergen_raw:
+            return
             
-            # Check against user allergies
+        # Split by comma to get individual items
+        parts = [p.strip() for p in str(allergen_raw).split(',')]
+        
+        for part in parts:
+            if not part:
+                continue
+                
+            # Clean up the part (remove en: prefix, etc)
+            clean_part = part
+            for prefix in ["en:", "fr:", "de:", "es:", "it:", "pt:"]:
+                clean_part = clean_part.replace(prefix, "")
+            clean_part = clean_part.replace("-", " ").replace("_", " ").strip()
+            clean_part_lower = clean_part.lower()
+            
             for user_allergy in user_allergies:
                 user_allergy_lower = user_allergy.lower()
-                # Check if allergen matches user allergy (bidirectional substring match)
-                if (user_allergy_lower == allergen_lower or
-                    user_allergy_lower in allergen_lower or 
-                    allergen_lower in user_allergy_lower):
-                    flagged.append({
-                        "type": "allergy",
-                        "item": user_allergy,
-                        "ingredient": allergen_name,
-                        "source": "allergens_tags"
-                    })
-                    break  # Don't flag same allergen twice
-    
+                
+                # Check for match
+                if (user_allergy_lower == clean_part_lower or
+                    user_allergy_lower in clean_part_lower or 
+                    clean_part_lower in user_allergy_lower):
+                    
+                    # Avoid duplicates
+                    already_flagged = any(
+                        f.get("ingredient", "").lower() == clean_part_lower and 
+                        f.get("item", "").lower() == user_allergy_lower
+                        for f in flagged
+                    )
+                    
+                    if not already_flagged:
+                        flagged.append({
+                            "type": "allergy",
+                            "item": user_allergy,
+                            "ingredient": clean_part, # Return the specific cleaned ingredient
+                            "source": source
+                        })
+                    # Don't break here, one ingredient might match multiple allergies (rare but possible)
+
+    # Check allergens_tags (array)
+    allergens_tags = product_data.get("allergens_tags", [])
+    if isinstance(allergens_tags, list):
+        for tag in allergens_tags:
+            check_and_add(tag, "allergens_tags")
+            
     # Check allergens text field
     allergens_text = product_data.get("allergens", "")
-    if allergens_text and isinstance(allergens_text, str):
-        allergens_text_lower = allergens_text.lower()
-        for user_allergy in user_allergies:
-            user_allergy_lower = user_allergy.lower()
-            if user_allergy_lower in allergens_text_lower:
-                # Check if not already flagged
-                already_flagged = any(
-                    f.get("item", "").lower() == user_allergy_lower and 
-                    f.get("source") == "allergens_text"
-                    for f in flagged
-                )
-                if not already_flagged:
-                    flagged.append({
-                        "type": "allergy",
-                        "item": user_allergy,
-                        "ingredient": allergens_text,
-                        "source": "allergens_text"
-                    })
+    if allergens_text:
+        check_and_add(allergens_text, "allergens_text")
     
     # Check allergens_from_ingredients
     allergens_from_ing = product_data.get("allergens_from_ingredients", "")
-    if allergens_from_ing and isinstance(allergens_from_ing, str):
-        allergens_from_ing_lower = allergens_from_ing.lower()
-        for user_allergy in user_allergies:
-            user_allergy_lower = user_allergy.lower()
-            if user_allergy_lower in allergens_from_ing_lower:
-                # Check if not already flagged
-                already_flagged = any(
-                    f.get("item", "").lower() == user_allergy_lower and 
-                    f.get("source") == "allergens_from_ingredients"
-                    for f in flagged
-                )
-                if not already_flagged:
-                    flagged.append({
-                        "type": "allergy",
-                        "item": user_allergy,
-                        "ingredient": allergens_from_ing,
-                        "source": "allergens_from_ingredients"
-                    })
+    if allergens_from_ing:
+        check_and_add(allergens_from_ing, "allergens_from_ingredients")
     
     return flagged
 
