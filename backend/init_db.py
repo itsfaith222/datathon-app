@@ -25,7 +25,8 @@ cur.execute("INSERT OR REPLACE INTO profile (id, data) VALUES (1, ?)", (json.dum
 products = [
     ("1234567890123", "Example Oreo-style Cookies", ["wheat", "sugar", "cocoa", "soy lecithin"]),
     ("9876543210987", "Crunchy Peanut Butter", ["peanuts", "salt", "oil"]),
-    ("1111111111111", "Milk Chocolate Bar", ["milk", "sugar", "cocoa butter"])
+    ("8801073113312", "Noodles", ["milk", "sugar", "cocoa butter"]),
+    ("05574237460", "tomato paste", ["sugar", "milk", "cocoa", "peanuts"]),
 ]
 
 for barcode, name, ingredients in products:

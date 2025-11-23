@@ -23,14 +23,15 @@
   </div>
 
   <div style="margin-top:12px;">
-    <video id="video" width="360" height="260"></video>
+    <!-- The div where the scanner UI will be rendered -->
+    <div id="reader" style="width: 500px"></div>
   </div>
 
   <div id="scanOutput" style="margin-top:12px;"></div>
   <div id="checkOutput" style="margin-top:12px;"></div>
 
-  <!-- ZXing library -->
-  <script src="https://unpkg.com/@zxing/library@latest"></script>
+  <!-- html5-qrcode library -->
+  <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <script src="script.js"></script>
 </body>
 </html>
