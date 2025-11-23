@@ -628,14 +628,90 @@
 
     .popup-content {
       background: var(--bg-card);
-      padding: 30px;
       border-radius: 16px;
-      max-width: 500px;
+      max-width: 600px;
+      max-height: 90vh;
       width: 90%;
       box-shadow: 0 20px 60px var(--shadow);
       animation: slideUp 0.3s ease-out;
       color: var(--text-primary);
       transition: background 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      border: 2px solid var(--accent-green);
+    }
+    
+    .popup-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 30px;
+      border-bottom: 2px solid var(--border-color);
+      flex-shrink: 0;
+    }
+    
+    .popup-header h3 {
+      margin: 0;
+      color: #dc3545;
+    }
+    
+    .popup-content.safe .popup-header h3 {
+      color: var(--accent-green);
+    }
+    
+    .popup-close-x {
+      background: transparent;
+      border: none;
+      font-size: 32px;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 0;
+      width: 32px;
+      height: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.2s ease;
+      line-height: 1;
+    }
+    
+    .popup-close-x:hover {
+      background: var(--bg-hover);
+      color: var(--text-primary);
+      transform: rotate(90deg);
+    }
+    
+    .popup-body {
+      padding: 20px 30px;
+      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+    }
+    
+    .popup-body::-webkit-scrollbar {
+      width: 8px;
+    }
+    
+    .popup-body::-webkit-scrollbar-track {
+      background: var(--bg-secondary);
+      border-radius: 4px;
+    }
+    
+    .popup-body::-webkit-scrollbar-thumb {
+      background: var(--accent-green);
+      border-radius: 4px;
+    }
+    
+    .popup-body::-webkit-scrollbar-thumb:hover {
+      background: var(--accent-orange);
+    }
+    
+    .popup-footer {
+      padding: 20px 30px;
+      border-top: 2px solid var(--border-color);
+      flex-shrink: 0;
     }
 
     @keyframes slideUp {
@@ -650,15 +726,6 @@
       }
     }
 
-    .popup-content h3 {
-      color: #dc3545;
-      margin-top: 0;
-      margin-bottom: 16px;
-    }
-
-    .popup-content.safe h3 {
-      color: var(--accent-green);
-    }
 
     .popup-content ul {
       margin: 16px 0;

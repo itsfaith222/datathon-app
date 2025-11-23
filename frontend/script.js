@@ -614,8 +614,16 @@ async function checkProduct(barcode) {
 
                 checkOutput.innerHTML = `<div style="color: #dc3545; padding: 20px; background: #f8d7da; border-radius: 8px;">${errorMsg}</div>`;
 
-                // Update scanned item to reflect failure
-                saveScannedItem(barcode, "Unknown Product", null, null);
+                // Save to history even when not found - use barcode as product name if no name available
+                const productName = `Product Not Found (${barcode})`;
+                saveScannedItem(barcode, productName, null, null);
+                
+                // Also ensure it's in history properly
+                const historyItem = scanHistory.find(item => item.barcode === barcode);
+                if (!historyItem) {
+                    // If somehow not saved, save it again
+                    saveScannedItem(barcode, productName, null, null);
+                }
 
                 if (errorData.similarProducts && errorData.similarProducts.length > 0) {
                     displaySimilarProductsHTML(errorData.similarProducts);
@@ -681,9 +689,16 @@ async function checkProduct(barcode) {
         }
     }
 
-    checkOutput.innerHTML = `<div style="color: #dc3545; padding: 20px;">Error: ${lastError.message}</div>`;
-    // Update scanned item to reflect error
-    saveScannedItem(barcode, "Scan Error", null, null);
+    checkOutput.innerHTML = `<div style="color: #dc3545; padding: 20px;">Error: ${lastError ? lastError.message : 'Unknown error'}</div>`;
+    // Save to history even on error
+    const errorProductName = `Error Scanning (${barcode})`;
+    saveScannedItem(barcode, errorProductName, null, null);
+    
+    // Ensure it's in history
+    const historyItem = scanHistory.find(item => item.barcode === barcode);
+    if (!historyItem) {
+        saveScannedItem(barcode, errorProductName, null, null);
+    }
 }
 
 // Extract ingredients from product data
@@ -783,13 +798,27 @@ function showCheckResults(result, barcode) {
 
     const popup = document.createElement('div');
     popup.className = 'popup-overlay';
+    
+    // Close on overlay click
+    popup.addEventListener('click', function(e) {
+        if (e.target === popup) {
+            popup.remove();
+        }
+    });
 
     if (isSafe) {
         popup.innerHTML = `
             <div class="popup-content safe">
-                <h3>✓ Safe to Consume</h3>
-                <p style="color: #555;">No dietary restrictions or allergies found in this product.</p>
-                <button class="close-popup-btn">Close</button>
+                <div class="popup-header">
+                    <h3>✓ Safe to Consume</h3>
+                    <button class="popup-close-x" onclick="closePopup(this, '${barcode}', true, [])" aria-label="Close">×</button>
+                </div>
+                <div class="popup-body">
+                    <p style="color: #555;">No dietary restrictions or allergies found in this product.</p>
+                </div>
+                <div class="popup-footer">
+                    <button class="close-popup-btn">Close</button>
+                </div>
             </div>
         `;
 
@@ -833,10 +862,17 @@ function showCheckResults(result, barcode) {
 
         popup.innerHTML = `
             <div class="popup-content">
-                <h3>⚠️ Alert</h3>
-                <p style="color: #555; margin-bottom: 16px;">This product matches your profile settings:</p>
-                ${contentHtml}
-                <button class="close-popup-btn">Close</button>
+                <div class="popup-header">
+                    <h3>⚠️ Alert</h3>
+                    <button class="popup-close-x" onclick="closePopup(this, '${barcode}', false, ${JSON.stringify(result.flagged).replace(/"/g, '&quot;')})" aria-label="Close">×</button>
+                </div>
+                <div class="popup-body">
+                    <p style="color: #555; margin-bottom: 16px;">This product matches your profile settings:</p>
+                    ${contentHtml}
+                </div>
+                <div class="popup-footer">
+                    <button class="close-popup-btn">Close</button>
+                </div>
             </div>
         `;
 
@@ -940,13 +976,24 @@ window.showNotificationProduct = function (barcode) {
 // Save scanned item (when first scanned, before checking)
 function saveScannedItem(barcode, productName, imageUrl, productData) {
     // Just save directly to history with null isSafe (will be updated when checked)
+    
+    // Get current profile info
+    const currentProfile = profiles.find(p => p.id === currentProfileId);
+    const profileName = currentProfile?.name || "Unknown Profile";
+    const profileAllergies = currentProfile?.allergies || [];
+    const profileRestrictions = currentProfile?.restrictions || [];
+    
     const historyItem = {
         barcode: barcode,
-        productName: productName,
+        productName: productName || `Barcode: ${barcode}`,
         imageUrl: imageUrl,
         productData: productData,
         isSafe: null, // Not checked yet
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        profileId: currentProfileId,
+        profileName: profileName,
+        profileAllergies: [...profileAllergies],
+        profileRestrictions: [...profileRestrictions]
     };
 
     // Remove existing entry with same barcode
@@ -958,8 +1005,7 @@ function saveScannedItem(barcode, productName, imageUrl, productData) {
         scanHistory = scanHistory.slice(0, 100);
     }
 
-    // Save to both localStorage and sessionStorage for compatibility
-    localStorage.setItem('scanHistory', JSON.stringify(scanHistory));
+    // Save to sessionStorage only (session-based)
     sessionStorage.setItem('scanHistory', JSON.stringify(scanHistory));
     displayHistory();
 }
@@ -995,8 +1041,7 @@ function saveToHistory(barcode, productName, imageUrl, productData, isSafe) {
         scanHistory = scanHistory.slice(0, 100);
     }
 
-    // Save to both localStorage and sessionStorage for compatibility
-    localStorage.setItem('scanHistory', JSON.stringify(scanHistory));
+    // Save to sessionStorage only (session-based)
     sessionStorage.setItem('scanHistory', JSON.stringify(scanHistory));
     displayHistory();
 }
@@ -1025,7 +1070,6 @@ function updateHistoryItemStatus(barcode, isSafe, flagged) {
         // Note: We don't update profile info if it already exists, to preserve the original scan context
 
         // Save to both localStorage and sessionStorage for compatibility
-        localStorage.setItem('scanHistory', JSON.stringify(scanHistory));
         sessionStorage.setItem('scanHistory', JSON.stringify(scanHistory));
         displayHistory(); // Refresh display to show updated info
     }
@@ -1122,6 +1166,13 @@ window.showHistoryPopup = function (barcode) {
 
     const popup = document.createElement('div');
     popup.className = 'popup-overlay';
+    
+    // Close on overlay click
+    popup.addEventListener('click', function(e) {
+        if (e.target === popup) {
+            popup.remove();
+        }
+    });
 
     const isSafe = historyItem.isSafe !== false;
     const statusClass = isSafe ? 'safe' : '';
@@ -1169,7 +1220,7 @@ window.showHistoryPopup = function (barcode) {
 
         profileInfo = `
             <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid var(--border-color);">
-                <h4 style="color: var(--accent-blue); margin-bottom: 12px;">Profile Used:</h4>
+                <h4 style="color: var(--accent-green); margin-bottom: 12px;">Profile Used:</h4>
                 <div style="font-weight: 600; margin-bottom: 8px;">${escapeHtml(historyItem.profileName)}</div>
                 ${allergiesHtml}
                 ${restrictionsHtml}
@@ -1179,16 +1230,23 @@ window.showHistoryPopup = function (barcode) {
 
     popup.innerHTML = `
         <div class="popup-content ${statusClass}">
-            <h3>${isSafe ? '✓ Safe to Consume' : '⚠️ Dietary Restriction Alert'}</h3>
-            <div style="margin-bottom: 16px;">
-                <strong>Product:</strong> ${escapeHtml(historyItem.productName || 'Unknown Product')}
+            <div class="popup-header">
+                <h3>${isSafe ? '✓ Safe to Consume' : '⚠️ Dietary Restriction Alert'}</h3>
+                <button class="popup-close-x" onclick="this.closest('.popup-overlay').remove()" aria-label="Close">×</button>
             </div>
-            <div style="margin-bottom: 16px;">
-                <strong>Scanned:</strong> ${new Date(historyItem.timestamp).toLocaleString()}
+            <div class="popup-body">
+                <div style="margin-bottom: 16px;">
+                    <strong>Product:</strong> ${escapeHtml(historyItem.productName || 'Unknown Product')}
+                </div>
+                <div style="margin-bottom: 16px;">
+                    <strong>Scanned:</strong> ${new Date(historyItem.timestamp).toLocaleString()}
+                </div>
+                ${flaggedSection}
+                ${profileInfo}
             </div>
-            ${flaggedSection}
-            ${profileInfo}
-            <button class="close-popup-btn" style="margin-top: 20px;">Close</button>
+            <div class="popup-footer">
+                <button class="close-popup-btn">Close</button>
+            </div>
         </div>
     `;
 
@@ -1273,14 +1331,28 @@ async function checkMealPlanAgainstRestrictions(mealPlanText) {
 function showMealPlanCheckResults(result) {
     const popup = document.createElement('div');
     popup.className = 'popup-overlay';
+    
+    // Close on overlay click
+    popup.addEventListener('click', function(e) {
+        if (e.target === popup) {
+            popup.remove();
+        }
+    });
 
     if (!result.hasIssues || result.flaggedItems.length === 0) {
         popup.innerHTML = `
             <div class="popup-content safe">
-                <h3>✓ Meal Plan is Safe</h3>
-                <p style="color: #555;">All items in your meal plan are safe according to your dietary restrictions and allergies.</p>
-                <p style="color: #555; margin-top: 10px;">Total items checked: ${result.totalItems}</p>
-                <button class="close-popup-btn">Close</button>
+                <div class="popup-header">
+                    <h3>✓ Meal Plan is Safe</h3>
+                    <button class="popup-close-x" onclick="this.closest('.popup-overlay').remove()" aria-label="Close">×</button>
+                </div>
+                <div class="popup-body">
+                    <p style="color: #555;">All items in your meal plan are safe according to your dietary restrictions and allergies.</p>
+                    <p style="color: #555; margin-top: 10px;">Total items checked: ${result.totalItems}</p>
+                </div>
+                <div class="popup-footer">
+                    <button class="close-popup-btn">Close</button>
+                </div>
             </div>
         `;
     } else {
@@ -1291,19 +1363,29 @@ function showMealPlanCheckResults(result) {
 
         popup.innerHTML = `
             <div class="popup-content">
-                <h3>⚠️ Meal Plan Issues Found</h3>
-                <p style="color: #555;">Some items in your meal plan may conflict with your restrictions:</p>
-                <ul style="margin-top: 10px; padding-left: 20px;">${flaggedList}</ul>
-                <p style="color: #555; margin-top: 10px; font-size: 12px;">Total items checked: ${result.totalItems} | Issues found: ${result.flaggedItems.length}</p>
-                <button class="close-popup-btn">Close</button>
+                <div class="popup-header">
+                    <h3>⚠️ Meal Plan Issues Found</h3>
+                    <button class="popup-close-x" onclick="this.closest('.popup-overlay').remove()" aria-label="Close">×</button>
+                </div>
+                <div class="popup-body">
+                    <p style="color: #555;">Some items in your meal plan may conflict with your restrictions:</p>
+                    <ul style="margin-top: 10px; padding-left: 20px;">${flaggedList}</ul>
+                    <p style="color: #555; margin-top: 10px; font-size: 12px;">Total items checked: ${result.totalItems} | Issues found: ${result.flaggedItems.length}</p>
+                </div>
+                <div class="popup-footer">
+                    <button class="close-popup-btn">Close</button>
+                </div>
             </div>
         `;
     }
-
-    const closeBtn = popup.querySelector('.close-popup-btn');
-    closeBtn.addEventListener('click', function () {
-        popup.remove();
-    });
+    
+    // Add close button event listener
+    const mealPlanCloseBtn = popup.querySelector('.close-popup-btn');
+    if (mealPlanCloseBtn) {
+        mealPlanCloseBtn.addEventListener('click', function() {
+            popup.remove();
+        });
+    }
 
     document.body.appendChild(popup);
 }

@@ -4,43 +4,22 @@
       "id": "default",
       "name": "Default Profile",
       "allergies": [
-        "soy"
+        "peanuts",
+        "tree nuts",
+        "milk",
+        "eggs",
+        "mustard",
+        "molluscs",
+        "coconut",
+        "cocoa"
       ],
       "restrictions": [
-        "vegetarian"
+        "vegan",
+        "vegetarian",
+        "kosher"
       ],
       "createdAt": "2024-01-01T00:00:00Z"
-    },
-    {
-      "id": "f4352797-fae1-44b2-a4f8-ec6425592b92",
-      "name": "Kai",
-      "allergies": [
-        "milk",
-        "soy",
-        "wheat"
-      ],
-      "restrictions": [
-<<<<<<< HEAD
-        "vegetarian",
-        "halal"
-=======
-        "vegan",
-        "vegetarian"
->>>>>>> bb64cb6fe456aeb6af5b13aa1ba1fe901d4221e5
-      ],
-      "createdAt": "2025-11-23T17:11:15.622951Z"
-    },
-    {
-      "id": "ce9fdcb0-9b12-45d8-ac98-db039262ca2a",
-      "name": "Sam",
-      "allergies": [
-        "shellfish"
-      ],
-      "restrictions": [
-        "vegetarian"
-      ],
-      "createdAt": "2025-11-23T18:58:49.304075Z"
     }
   ],
-  "activeProfileId": "f4352797-fae1-44b2-a4f8-ec6425592b92"
+  "activeProfileId": "default"
 }
