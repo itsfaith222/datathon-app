@@ -15,21 +15,12 @@
       "id": "8928ec53-1083-4c9b-a4de-71f7f851811f",
       "name": "Kai",
       "allergies": [
-        "peanuts",
-        "tree nuts",
         "milk",
-        "eggs",
-        "fish",
-        "shellfish",
-        "soy",
         "wheat"
       ],
       "restrictions": [
         "vegan",
-        "vegetarian",
-        "gluten-free",
-        "halal",
-        "kosher"
+        "vegetarian"
       ],
       "createdAt": "2025-11-23T17:11:15.622951Z"
     },
