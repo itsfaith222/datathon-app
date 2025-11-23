@@ -33,7 +33,8 @@ let isScanning = false;
 let currentProductData = null;
 let currentBarcode = null;
 let notifications = JSON.parse(localStorage.getItem('notifications') || '[]');
-let scanHistory = JSON.parse(localStorage.getItem('scanHistory') || '[]');
+// Try to load from both localStorage and sessionStorage for compatibility
+let scanHistory = JSON.parse(localStorage.getItem('scanHistory') || sessionStorage.getItem('scanHistory') || '[]');
 let currentHistoryFilter = 'all'; // 'all', 'safe', 'unsafe'
 
 // Theme Management
@@ -878,34 +879,33 @@ window.showNotificationProduct = function(barcode) {
 
 // Save scanned item (when first scanned, before checking)
 function saveScannedItem(barcode, productName, imageUrl, productData) {
-    // Remove existing entry with same barcode from scanned items
-    scannedItems = scannedItems.filter(item => item.barcode !== barcode);
-    
-    const scannedItem = {
+    // Just save directly to history with null isSafe (will be updated when checked)
+    const historyItem = {
         barcode: barcode,
         productName: productName,
         imageUrl: imageUrl,
         productData: productData,
+        isSafe: null, // Not checked yet
         timestamp: new Date().toISOString()
     };
     
-    scannedItems.unshift(scannedItem);
+    // Remove existing entry with same barcode
+    scanHistory = scanHistory.filter(item => item.barcode !== barcode);
+    scanHistory.unshift(historyItem);
     
-    // Keep only last 100 scanned items
-    if (scannedItems.length > 100) {
-        scannedItems = scannedItems.slice(0, 100);
+    // Keep only last 100 items
+    if (scanHistory.length > 100) {
+        scanHistory = scanHistory.slice(0, 100);
     }
     
-    localStorage.setItem('scannedItems', JSON.stringify(scannedItems));
-    displayScannedItems();
+    // Save to both localStorage and sessionStorage for compatibility
+    localStorage.setItem('scanHistory', JSON.stringify(scanHistory));
+    sessionStorage.setItem('scanHistory', JSON.stringify(scanHistory));
+    displayHistory();
 }
 
 // Save to history (when item is checked against restrictions)
 function saveToHistory(barcode, productName, imageUrl, productData, isSafe) {
-    // Remove from scanned items if it exists there
-    scannedItems = scannedItems.filter(item => item.barcode !== barcode);
-    localStorage.setItem('scannedItems', JSON.stringify(scannedItems));
-    
     // Remove existing entry with same barcode from history
     scanHistory = scanHistory.filter(item => item.barcode !== barcode);
     
@@ -935,57 +935,15 @@ function saveToHistory(barcode, productName, imageUrl, productData, isSafe) {
         scanHistory = scanHistory.slice(0, 100);
     }
     
+    // Save to both localStorage and sessionStorage for compatibility
     localStorage.setItem('scanHistory', JSON.stringify(scanHistory));
+    sessionStorage.setItem('scanHistory', JSON.stringify(scanHistory));
     displayHistory();
 }
 
-// Update history item status (moves from scannedItems to scanHistory if needed)
+// Update history item status
 function updateHistoryItemStatus(barcode, isSafe, flagged) {
-    // Check if item is in scannedItems and needs to be moved to history
-    const scannedItem = scannedItems.find(h => h.barcode === barcode);
-    if (scannedItem) {
-        // Move from scannedItems to scanHistory
-        scannedItems = scannedItems.filter(item => item.barcode !== barcode);
-        localStorage.setItem('scannedItems', JSON.stringify(scannedItems));
-        
-        // Get current profile info
-        const currentProfile = profiles.find(p => p.id === currentProfileId);
-        const profileName = currentProfile?.name || "Unknown Profile";
-        const profileAllergies = currentProfile?.allergies || [];
-        const profileRestrictions = currentProfile?.restrictions || [];
-        
-        // Create history item from scanned item
-        const historyItem = {
-            barcode: scannedItem.barcode,
-            productName: scannedItem.productName,
-            imageUrl: scannedItem.imageUrl,
-            productData: scannedItem.productData,
-            isSafe: isSafe,
-            flagged: flagged,
-            timestamp: scannedItem.timestamp, // Keep original scan timestamp
-            checkedAt: new Date().toISOString(),
-            profileId: currentProfileId,
-            profileName: profileName,
-            profileAllergies: [...profileAllergies],
-            profileRestrictions: [...profileRestrictions]
-        };
-        
-        // Remove existing entry with same barcode from history
-        scanHistory = scanHistory.filter(item => item.barcode !== barcode);
-        scanHistory.unshift(historyItem);
-        
-        // Keep only last 100 items
-        if (scanHistory.length > 100) {
-            scanHistory = scanHistory.slice(0, 100);
-        }
-        
-        localStorage.setItem('scanHistory', JSON.stringify(scanHistory));
-        displayScannedItems(); // Update scanned items display
-        displayHistory(); // Refresh display to show updated info
-        return;
-    }
-    
-    // Item already in history, just update it
+    // Find item in history
     const item = scanHistory.find(h => h.barcode === barcode);
     if (item) {
         item.isSafe = isSafe;
@@ -1006,55 +964,45 @@ function updateHistoryItemStatus(barcode, isSafe, flagged) {
         }
         // Note: We don't update profile info if it already exists, to preserve the original scan context
         
+        // Save to both localStorage and sessionStorage for compatibility
+        localStorage.setItem('scanHistory', JSON.stringify(scanHistory));
         sessionStorage.setItem('scanHistory', JSON.stringify(scanHistory));
         displayHistory(); // Refresh display to show updated info
     }
 }
 
-// Display scanned items (not yet checked)
-function displayScannedItems() {
-    if (!scannedItemsList) return;
-    
-    if (!scannedItems || scannedItems.length === 0) {
-        scannedItemsList.innerHTML = '<div class="empty-state">No scanned items yet</div>';
-        return;
-    }
-    
-    let html = '';
-    scannedItems.forEach(item => {
-        html += `
-            <div class="history-item" onclick="checkProduct('${item.barcode}')" style="cursor: pointer; border-left-color: #6c757d;">
-                <h4>${escapeHtml(item.productName)}</h4>
-                <p style="font-size: 11px; color: var(--text-muted);">${new Date(item.timestamp).toLocaleString()}</p>
-                <p style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">Click to check against restrictions</p>
-            </div>
-        `;
-    });
-    
-    scannedItemsList.innerHTML = html;
-}
 
 // Display history
 function displayHistory() {
+    if (!historyList) return;
+    
     let filteredHistory = scanHistory;
     
+    // Filter based on current filter
     if (currentHistoryFilter === 'safe') {
         filteredHistory = scanHistory.filter(item => item.isSafe === true);
     } else if (currentHistoryFilter === 'unsafe') {
         filteredHistory = scanHistory.filter(item => item.isSafe === false);
+    } else {
+        // 'all' - show all items including unchecked ones
+        filteredHistory = scanHistory;
     }
     
     if (!filteredHistory || filteredHistory.length === 0) {
-        historyList.innerHTML = '<div class="empty-state">No checked items yet</div>';
+        historyList.innerHTML = '<div class="empty-state">No items yet</div>';
         return;
     }
     
     let html = '';
     filteredHistory.forEach(item => {
-        const statusClass = item.isSafe ? 'safe' : 'unsafe';
-        const statusBadge = item.isSafe ? 
-            '<span class="status-badge status-safe">Safe</span>' : 
-            '<span class="status-badge status-unsafe">Unsafe</span>';
+        // Handle unchecked items (isSafe === null)
+        const isChecked = item.isSafe !== null;
+        const statusClass = isChecked ? (item.isSafe ? 'safe' : 'unsafe') : '';
+        const statusBadge = isChecked ? 
+            (item.isSafe ? 
+                '<span class="status-badge status-safe">Safe</span>' : 
+                '<span class="status-badge status-unsafe">Unsafe</span>') :
+            '<span class="status-badge" style="background: #6c757d; color: white;">Not Checked</span>';
         
         // Show profile info if available
         let profileInfo = '';
@@ -1072,11 +1020,15 @@ function displayHistory() {
             profileInfo = `<div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Profile: ${escapeHtml(item.profileName)}${restrictionsSummary}</div>`;
         }
         
+        // For unchecked items, clicking should check them
+        const onClickAction = isChecked ? `showHistoryPopup('${item.barcode}')` : `checkProduct('${item.barcode}')`;
+        
         html += `
-            <div class="history-item ${statusClass}" onclick="showHistoryPopup('${item.barcode}')">
+            <div class="history-item ${statusClass}" onclick="${onClickAction}" style="cursor: pointer;">
                 <h4>${escapeHtml(item.productName)} ${statusBadge}</h4>
                 <p>${new Date(item.timestamp).toLocaleString()}</p>
                 ${profileInfo}
+                ${!isChecked ? '<p style="font-size: 10px; color: var(--text-muted); margin-top: 4px;">Click to check against restrictions</p>' : ''}
             </div>
         `;
     });

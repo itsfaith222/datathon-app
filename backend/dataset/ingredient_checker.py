@@ -91,8 +91,17 @@ def check_ingredient_against_restrictions(ingredient: str, restrictions: Dict) -
     
     # Check dataset for allergens
     allergens = get_ingredient_allergens(ingredient)
+    
+    # Also check the new food allergens dataset
+    try:
+        from .food_allergens_dataset import get_food_allergens
+        more_allergens = get_food_allergens(ingredient)
+        allergens.extend(more_allergens)
+    except Exception as e:
+        print(f"Error checking food allergens dataset: {e}")
+        
     for allergen in allergens:
-        allergen_lower = allergen.lower().strip()
+        allergen_lower = str(allergen).lower().strip()
         # Check if this allergen is in user's restrictions
         for allergy in restrictions.get("allergies", []):
             if allergy.lower().strip() in allergen_lower or allergen_lower in allergy.lower().strip():
