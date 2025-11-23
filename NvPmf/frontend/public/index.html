@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Datathon App</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Datathon Application</h1>
+            <p class="subtitle">Welcome to the Datathon Hackathon Project</p>
+        </header>
+
+        <main>
+            <section class="status-section">
+                <h2>System Status</h2>
+                <div id="status" class="status-indicator">
+                    <span class="loading">Checking...</span>
+                </div>
+            </section>
+
+            <section class="api-section">
+                <h2>API Test</h2>
+                <button id="testBtn" class="btn btn-primary">Test Backend Connection</button>
+                <div id="apiResponse" class="response-box"></div>
+            </section>
+
+            <section class="info-section">
+                <h2>About</h2>
+                <p>This is a full-stack web application built for the Datathon hackathon.</p>
+                <ul>
+                    <li><strong>Frontend:</strong> Node.js with Express</li>
+                    <li><strong>Backend:</strong> Python with Flask</li>
+                    <li><strong>Status:</strong> Development Environment</li>
+                </ul>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2024 Datathon Team</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
