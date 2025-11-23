@@ -1,68 +1,36 @@
-<!DOCTYPE html>
-<html lang="en">
+<!-- frontend/index.html -->
+<!doctype html>
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Datathon App</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            background-color: #ffb6c1; /* Light pink background */
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        .text-bubble {
-            background-color: white;
-            border-radius: 20px;
-            padding: 30px 40px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-            position: relative;
-            max-width: 400px;
-            text-align: center;
-            font-size: 24px;
-            color: #333;
-            animation: fadeIn 0.5s ease-in;
-        }
-
-        /* Speech bubble tail */
-        .text-bubble::after {
-            content: '';
-            position: absolute;
-            bottom: -15px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 0;
-            border-left: 15px solid transparent;
-            border-right: 15px solid transparent;
-            border-top: 15px solid white;
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-    </style>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Health Scanner (Demo)</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; max-width:900px; margin:20px auto; padding:12px; }
+    video { border: 1px solid #aaa; border-radius:6px; }
+    .safe { color: green; font-weight: 700; font-size:18px; }
+    .unsafe { color: red; font-weight: 800; font-size:20px; animation: flash 0.7s infinite; }
+    @keyframes flash { 50% { opacity: 0.4 } }
+  </style>
 </head>
 <body>
-    <div class="text-bubble">
-        hello this is faith welcome to our datathon app
-    </div>
+  <h1>Health Scanner</h1>
+  <p>Click <strong>Start Scanner</strong>, then hold the barcode (on the product or on your phone screen) in front of your laptop camera.</p>
+
+  <div>
+    <button id="startScanner">Start Scanner</button>
+    <button id="stopScanner" disabled>Stop Scanner</button>
+  </div>
+
+  <div style="margin-top:12px;">
+    <video id="video" width="360" height="260"></video>
+  </div>
+
+  <div id="scanOutput" style="margin-top:12px;"></div>
+  <div id="checkOutput" style="margin-top:12px;"></div>
+
+  <!-- ZXing library -->
+  <script src="https://unpkg.com/@zxing/library@latest"></script>
+  <script src="script.js"></script>
 </body>
 </html>
-
