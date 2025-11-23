@@ -11,8 +11,16 @@ const saveRestrictionsBtn = document.getElementById("saveRestrictions");
 const allergyCheckboxes = document.querySelectorAll(".allergy-checkbox");
 const restrictionCheckboxes = document.querySelectorAll(".restriction-checkbox");
 const restrictionsStatus = document.getElementById("restrictionsStatus");
+const profileSelect = document.getElementById("profileSelect");
+const createProfileBtn = document.getElementById("createProfileBtn");
+const deleteProfileBtn = document.getElementById("deleteProfileBtn");
+const profileStatus = document.getElementById("profileStatus");
+
+let currentProfileId = null;
+let profiles = [];
 const notificationsList = document.getElementById("notificationsList");
 const historyList = document.getElementById("historyList");
+const showAllBtn = document.getElementById("showAll");
 const showSafeBtn = document.getElementById("showSafe");
 const showUnsafeBtn = document.getElementById("showUnsafe");
 const notificationCount = document.getElementById("notificationCount");
@@ -69,33 +77,85 @@ function docReady(fn) {
 }
 
 docReady(function() {
-    loadRestrictions();
-    updateActiveRestrictionsDisplay();
-    displayNotifications();
-    displayHistory();
-    
-    // Update display when selections change
-    allergyCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateActiveRestrictionsDisplay);
-    });
-    restrictionCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', updateActiveRestrictionsDisplay);
-    });
-    
-    // History filter buttons
-    showSafeBtn.addEventListener('click', () => {
-        currentHistoryFilter = 'safe';
-        showSafeBtn.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
-        showUnsafeBtn.style.background = '#6c757d';
+    try {
+        // Initialize only if elements exist
+        if (profileSelect && createProfileBtn && deleteProfileBtn) {
+            loadProfiles().catch(err => {
+                console.error("Error loading profiles:", err);
+                // Fallback: try to load restrictions directly
+                loadRestrictions();
+            });
+            
+            // Profile management
+            profileSelect.addEventListener('change', onProfileChange);
+            createProfileBtn.addEventListener('click', showCreateProfileDialog);
+            deleteProfileBtn.addEventListener('click', deleteCurrentProfile);
+        } else {
+            // Fallback: try to load restrictions directly if profile system not available
+            loadRestrictions();
+        }
+        
+        updateActiveRestrictionsDisplay();
+        displayNotifications();
         displayHistory();
-    });
+        
+        // Update display when selections change
+        allergyCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateActiveRestrictionsDisplay);
+        });
+        restrictionCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', updateActiveRestrictionsDisplay);
+        });
+    } catch (error) {
+        console.error("Error during initialization:", error);
+        // Still try to load basic functionality
+        try {
+            loadRestrictions();
+            displayHistory();
+        } catch (e) {
+            console.error("Failed to load basic functionality:", e);
+        }
+    }
     
-    showUnsafeBtn.addEventListener('click', () => {
-        currentHistoryFilter = 'unsafe';
-        showUnsafeBtn.style.background = '#dc3545';
-        showSafeBtn.style.background = '#6c757d';
-        displayHistory();
-    });
+    // History filter buttons (only if elements exist)
+    if (showAllBtn && showSafeBtn && showUnsafeBtn) {
+        showAllBtn.addEventListener('click', () => {
+            currentHistoryFilter = 'all';
+            showAllBtn.style.background = 'linear-gradient(135deg, #4a90e2 0%, #357abd 100%)';
+            showAllBtn.style.color = 'white';
+            showSafeBtn.style.background = '#6c757d';
+            showSafeBtn.style.color = 'white';
+            showUnsafeBtn.style.background = '#6c757d';
+            showUnsafeBtn.style.color = 'white';
+            displayHistory();
+        });
+        
+        showSafeBtn.addEventListener('click', () => {
+            currentHistoryFilter = 'safe';
+            showSafeBtn.style.background = 'linear-gradient(135deg, #28a745 0%, #20c997 100%)';
+            showSafeBtn.style.color = 'white';
+            showAllBtn.style.background = '#6c757d';
+            showAllBtn.style.color = 'white';
+            showUnsafeBtn.style.background = '#6c757d';
+            showUnsafeBtn.style.color = 'white';
+            displayHistory();
+        });
+        
+        showUnsafeBtn.addEventListener('click', () => {
+            currentHistoryFilter = 'unsafe';
+            showUnsafeBtn.style.background = '#dc3545';
+            showUnsafeBtn.style.color = 'white';
+            showAllBtn.style.background = '#6c757d';
+            showAllBtn.style.color = 'white';
+            showSafeBtn.style.background = '#6c757d';
+            showSafeBtn.style.color = 'white';
+            displayHistory();
+        });
+        
+        // Set initial state for "All" button (default filter)
+        showAllBtn.style.background = 'linear-gradient(135deg, #4a90e2 0%, #357abd 100%)';
+        showAllBtn.style.color = 'white';
+    }
 });
 
 // Update active restrictions display
@@ -125,7 +185,57 @@ function updateActiveRestrictionsDisplay() {
     activeRestrictionsList.innerHTML = html;
 }
 
-// Load restrictions from backend
+// Load profiles and set active one
+async function loadProfiles() {
+    try {
+        const urls = [
+            `/api/profiles`,
+            `http://localhost:5000/api/profiles`
+        ];
+        
+        for (const url of urls) {
+            try {
+                const resp = await fetch(url);
+                if (resp.ok) {
+                    const data = await resp.json();
+                    profiles = data.profiles || [];
+                    currentProfileId = data.activeProfileId || (profiles[0]?.id);
+                    
+                    // Populate profile dropdown (only if element exists)
+                    if (profileSelect) {
+                        profileSelect.innerHTML = '';
+                        profiles.forEach(profile => {
+                            const option = document.createElement('option');
+                            option.value = profile.id;
+                            option.textContent = profile.name;
+                            if (profile.id === currentProfileId) {
+                                option.selected = true;
+                            }
+                            profileSelect.appendChild(option);
+                        });
+                    }
+                    
+                    // Show/hide delete button (can't delete if only one profile)
+                    if (deleteProfileBtn) {
+                        deleteProfileBtn.style.display = profiles.length > 1 ? 'block' : 'none';
+                    }
+                    
+                    // Load restrictions for active profile
+                    await loadRestrictions();
+                    return;
+                }
+            } catch (e) {
+                console.error(`Error fetching from ${url}:`, e);
+                continue;
+            }
+        }
+        console.warn("Could not load profiles from any URL");
+    } catch (e) {
+        console.error("Error loading profiles:", e);
+    }
+}
+
+// Load restrictions from active profile
 async function loadRestrictions() {
     try {
         const urls = [
@@ -145,14 +255,173 @@ async function loadRestrictions() {
                         checkbox.checked = data.restrictions.includes(checkbox.value);
                     });
                     updateActiveRestrictionsDisplay();
-            return;
-          }
+                    return;
+                }
             } catch (e) {
                 continue;
             }
         }
     } catch (e) {
         console.error("Error loading restrictions:", e);
+    }
+}
+
+// Handle profile change
+async function onProfileChange() {
+    const selectedProfileId = profileSelect.value;
+    if (!selectedProfileId || selectedProfileId === currentProfileId) {
+        return;
+    }
+    
+    try {
+        const urls = [
+            `/api/profiles/active`,
+            `http://localhost:5000/api/profiles/active`
+        ];
+        
+        for (const url of urls) {
+            try {
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({profileId: selectedProfileId})
+                });
+                
+                if (resp.ok) {
+                    currentProfileId = selectedProfileId;
+                    profileStatus.textContent = "Profile switched";
+                    setTimeout(() => {
+                        profileStatus.textContent = "";
+                    }, 2000);
+                    
+                    // Load restrictions for new profile
+                    await loadRestrictions();
+                    return;
+                }
+            } catch (e) {
+                continue;
+            }
+        }
+    } catch (e) {
+        console.error("Error switching profile:", e);
+        alert("Failed to switch profile");
+    }
+}
+
+// Show create profile dialog
+function showCreateProfileDialog() {
+    const name = prompt("Enter profile name:");
+    if (!name || !name.trim()) {
+        return;
+    }
+    
+    createProfile(name.trim());
+}
+
+// Create new profile
+async function createProfile(name) {
+    const allergies = Array.from(allergyCheckboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+    const restrictions = Array.from(restrictionCheckboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+    
+    try {
+        const urls = [
+            `/api/profiles`,
+            `http://localhost:5000/api/profiles`
+        ];
+        
+        for (const url of urls) {
+            try {
+                const resp = await fetch(url, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        name: name,
+                        allergies: allergies,
+                        restrictions: restrictions
+                    })
+                });
+                
+                if (resp.ok) {
+                    const data = await resp.json();
+                    profileStatus.textContent = "Profile created!";
+                    setTimeout(() => {
+                        profileStatus.textContent = "";
+                    }, 2000);
+                    
+                    // Reload profiles and switch to new one
+                    await loadProfiles();
+                    profileSelect.value = data.profile.id;
+                    await onProfileChange();
+                    return;
+                } else {
+                    const error = await resp.json().catch(() => ({}));
+                    alert(error.error || "Failed to create profile");
+                    return;
+                }
+            } catch (e) {
+                continue;
+            }
+        }
+        alert("Failed to create profile");
+    } catch (e) {
+        console.error("Error creating profile:", e);
+        alert("Failed to create profile");
+    }
+}
+
+// Delete current profile
+async function deleteCurrentProfile() {
+    if (!currentProfileId) {
+        return;
+    }
+    
+    const currentProfile = profiles.find(p => p.id === currentProfileId);
+    if (!currentProfile) {
+        return;
+    }
+    
+    if (!confirm(`Are you sure you want to delete "${currentProfile.name}"?`)) {
+        return;
+    }
+    
+    try {
+        const urls = [
+            `/api/profiles/${currentProfileId}`,
+            `http://localhost:5000/api/profiles/${currentProfileId}`
+        ];
+        
+        for (const url of urls) {
+            try {
+                const resp = await fetch(url, {
+                    method: 'DELETE'
+                });
+                
+                if (resp.ok) {
+                    profileStatus.textContent = "Profile deleted";
+                    setTimeout(() => {
+                        profileStatus.textContent = "";
+                    }, 2000);
+                    
+                    // Reload profiles (will switch to another profile automatically)
+                    await loadProfiles();
+                    return;
+                } else {
+                    const error = await resp.json().catch(() => ({}));
+                    alert(error.error || "Failed to delete profile");
+                    return;
+                }
+            } catch (e) {
+                continue;
+            }
+        }
+        alert("Failed to delete profile");
+    } catch (e) {
+        console.error("Error deleting profile:", e);
+        alert("Failed to delete profile");
     }
 }
 
@@ -507,9 +776,15 @@ function showCheckResults(result, barcode) {
             <div class="popup-content safe">
                 <h3>✓ Safe to Consume</h3>
                 <p style="color: #555;">No dietary restrictions or allergies found in this product.</p>
-                <button onclick="closePopup(this, '${barcode}', true, [])">Close</button>
+                <button class="close-popup-btn">Close</button>
             </div>
         `;
+        
+        // Add event listener to close button
+        const closeBtn = popup.querySelector('.close-popup-btn');
+        closeBtn.addEventListener('click', function() {
+            closePopup(this, barcode, true, []);
+        });
     } else {
         let flaggedList = '';
         result.flagged.forEach(item => {
@@ -521,9 +796,15 @@ function showCheckResults(result, barcode) {
                 <h3>⚠️ Dietary Restriction Alert</h3>
                 <p style="color: #555;">This product contains ingredients that match your restrictions:</p>
                 <ul>${flaggedList}</ul>
-                <button onclick="closePopup(this, '${barcode}', false, ${JSON.stringify(result.flagged)})">Close</button>
+                <button class="close-popup-btn">Close</button>
             </div>
         `;
+        
+        // Add event listener to close button (using closure to access variables)
+        const closeBtn = popup.querySelector('.close-popup-btn');
+        closeBtn.addEventListener('click', function() {
+            closePopup(this, barcode, false, result.flagged);
+        });
     }
     
     document.body.appendChild(popup);
@@ -597,13 +878,23 @@ function saveToHistory(barcode, productName, imageUrl, productData, isSafe) {
     // Remove existing entry with same barcode
     scanHistory = scanHistory.filter(item => item.barcode !== barcode);
     
+    // Get current profile info
+    const currentProfile = profiles.find(p => p.id === currentProfileId);
+    const profileName = currentProfile?.name || "Unknown Profile";
+    const profileAllergies = currentProfile?.allergies || [];
+    const profileRestrictions = currentProfile?.restrictions || [];
+    
     const historyItem = {
         barcode: barcode,
         productName: productName,
         imageUrl: imageUrl,
         productData: productData,
         isSafe: isSafe,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        profileId: currentProfileId,
+        profileName: profileName,
+        profileAllergies: [...profileAllergies], // Copy array
+        profileRestrictions: [...profileRestrictions] // Copy array
     };
     
     scanHistory.unshift(historyItem);
@@ -624,7 +915,23 @@ function updateHistoryItemStatus(barcode, isSafe, flagged) {
         item.isSafe = isSafe;
         item.flagged = flagged;
         item.checkedAt = new Date().toISOString();
+        
+        // Preserve profile info from scan time - only add if it wasn't saved initially
+        // This ensures we keep the profile that was active when the scan was performed,
+        // not the current profile (which might have changed)
+        if (!item.profileId && currentProfileId) {
+            const currentProfile = profiles.find(p => p.id === currentProfileId);
+            if (currentProfile) {
+                item.profileId = currentProfileId;
+                item.profileName = currentProfile.name || "Unknown Profile";
+                item.profileAllergies = [...(currentProfile.allergies || [])];
+                item.profileRestrictions = [...(currentProfile.restrictions || [])];
+            }
+        }
+        // Note: We don't update profile info if it already exists, to preserve the original scan context
+        
         localStorage.setItem('scanHistory', JSON.stringify(scanHistory));
+        displayHistory(); // Refresh display to show updated info
     }
 }
 
@@ -650,10 +957,27 @@ function displayHistory() {
             '<span class="status-badge status-safe">Safe</span>' : 
             '<span class="status-badge status-unsafe">Unsafe</span>';
         
+        // Show profile info if available
+        let profileInfo = '';
+        if (item.profileName) {
+            const allergiesCount = item.profileAllergies?.length || 0;
+            const restrictionsCount = item.profileRestrictions?.length || 0;
+            const restrictionsText = [];
+            if (allergiesCount > 0) {
+                restrictionsText.push(`${allergiesCount} allerg${allergiesCount === 1 ? 'y' : 'ies'}`);
+            }
+            if (restrictionsCount > 0) {
+                restrictionsText.push(`${restrictionsCount} restriction${restrictionsCount === 1 ? '' : 's'}`);
+            }
+            const restrictionsSummary = restrictionsText.length > 0 ? ` • ${restrictionsText.join(', ')}` : '';
+            profileInfo = `<div style="font-size: 11px; color: var(--text-muted); margin-top: 4px;">Profile: ${escapeHtml(item.profileName)}${restrictionsSummary}</div>`;
+        }
+        
         html += `
-            <div class="history-item ${statusClass}" onclick="showHistoryProduct('${item.barcode}')">
+            <div class="history-item ${statusClass}" onclick="showHistoryPopup('${item.barcode}')">
                 <h4>${escapeHtml(item.productName)} ${statusBadge}</h4>
                 <p>${new Date(item.timestamp).toLocaleString()}</p>
+                ${profileInfo}
             </div>
         `;
     });
@@ -661,7 +985,103 @@ function displayHistory() {
     historyList.innerHTML = html;
 }
 
-// Show product from history
+// Show history popup with flagged items and profile info
+window.showHistoryPopup = function(barcode) {
+    // Find the history item
+    const historyItem = scanHistory.find(item => item.barcode === barcode);
+    if (!historyItem) {
+        return;
+    }
+    
+    const popup = document.createElement('div');
+    popup.className = 'popup-overlay';
+    
+    const isSafe = historyItem.isSafe !== false;
+    const statusClass = isSafe ? 'safe' : '';
+    
+    // Build flagged items list
+    let flaggedSection = '';
+    if (isSafe) {
+        flaggedSection = `
+            <div style="margin-bottom: 16px;">
+                <strong>Result:</strong> <span style="color: #28a745; font-weight: 600;">✓ No dietary restrictions or allergies found in this product.</span>
+            </div>
+        `;
+    } else {
+        let flaggedList = '';
+        if (historyItem.flagged && historyItem.flagged.length > 0) {
+            historyItem.flagged.forEach(item => {
+                flaggedList += `<li><strong>${escapeHtml(item.ingredient)}</strong> - ${escapeHtml(item.type)}: ${escapeHtml(item.item)}</li>`;
+            });
+        } else {
+            flaggedList = '<li><em>No flagged ingredients</em></li>';
+        }
+        flaggedSection = `
+            <div style="margin-bottom: 16px;">
+                <strong>Flagged Ingredients:</strong>
+                <ul style="margin-top: 8px; padding-left: 20px;">${flaggedList}</ul>
+            </div>
+        `;
+    }
+    
+    // Build profile information
+    let profileInfo = '';
+    if (historyItem.profileName) {
+        const allergies = historyItem.profileAllergies || [];
+        const restrictions = historyItem.profileRestrictions || [];
+        
+        let allergiesHtml = '';
+        if (allergies.length > 0) {
+            allergiesHtml = `<div style="margin-top: 8px;"><strong>Allergies:</strong> ${allergies.map(a => `<span class="restriction-badge badge-allergy">${escapeHtml(a)}</span>`).join(' ')}</div>`;
+        }
+        
+        let restrictionsHtml = '';
+        if (restrictions.length > 0) {
+            restrictionsHtml = `<div style="margin-top: 8px;"><strong>Dietary Restrictions:</strong> ${restrictions.map(r => `<span class="restriction-badge badge-restriction">${escapeHtml(r)}</span>`).join(' ')}</div>`;
+        }
+        
+        profileInfo = `
+            <div style="margin-top: 20px; padding-top: 20px; border-top: 2px solid var(--border-color);">
+                <h4 style="color: var(--accent-blue); margin-bottom: 12px;">Profile Used:</h4>
+                <div style="font-weight: 600; margin-bottom: 8px;">${escapeHtml(historyItem.profileName)}</div>
+                ${allergiesHtml}
+                ${restrictionsHtml}
+            </div>
+        `;
+    }
+    
+    popup.innerHTML = `
+        <div class="popup-content ${statusClass}">
+            <h3>${isSafe ? '✓ Safe to Consume' : '⚠️ Dietary Restriction Alert'}</h3>
+            <div style="margin-bottom: 16px;">
+                <strong>Product:</strong> ${escapeHtml(historyItem.productName || 'Unknown Product')}
+            </div>
+            <div style="margin-bottom: 16px;">
+                <strong>Scanned:</strong> ${new Date(historyItem.timestamp).toLocaleString()}
+            </div>
+            ${flaggedSection}
+            ${profileInfo}
+            <button class="close-popup-btn" style="margin-top: 20px;">Close</button>
+        </div>
+    `;
+    
+    // Add event listener to close button
+    const closeBtn = popup.querySelector('.close-popup-btn');
+    closeBtn.addEventListener('click', function() {
+        popup.remove();
+    });
+    
+    // Also allow closing by clicking outside
+    popup.addEventListener('click', function(e) {
+        if (e.target === popup) {
+            popup.remove();
+        }
+    });
+    
+    document.body.appendChild(popup);
+};
+
+// Show product from history (alternative function for direct product view)
 window.showHistoryProduct = function(barcode) {
     checkProduct(barcode);
     window.scrollTo({ top: 0, behavior: 'smooth' });

@@ -1,0 +1,49 @@
+{
+  "profiles": [
+    {
+      "id": "default",
+      "name": "Default Profile",
+      "allergies": [
+        "soy"
+      ],
+      "restrictions": [
+        "gluten-free"
+      ],
+      "createdAt": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "8928ec53-1083-4c9b-a4de-71f7f851811f",
+      "name": "Kai",
+      "allergies": [
+        "peanuts",
+        "tree nuts",
+        "milk",
+        "eggs",
+        "fish",
+        "shellfish",
+        "soy",
+        "wheat"
+      ],
+      "restrictions": [
+        "vegan",
+        "vegetarian",
+        "gluten-free",
+        "halal",
+        "kosher"
+      ],
+      "createdAt": "2025-11-23T17:11:15.622951Z"
+    },
+    {
+      "id": "ce9fdcb0-9b12-45d8-ac98-db039262ca2a",
+      "name": "Sam",
+      "allergies": [
+        "shellfish"
+      ],
+      "restrictions": [
+        "vegetarian"
+      ],
+      "createdAt": "2025-11-23T17:12:06.192521Z"
+    }
+  ],
+  "activeProfileId": "8928ec53-1083-4c9b-a4de-71f7f851811f"
+}

@@ -112,6 +112,59 @@
       font-size: 20px;
     }
     
+    .profile-section {
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid var(--border-color);
+    }
+    
+    .profile-section label {
+      display: block;
+      color: var(--text-secondary);
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    .profile-controls {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+    
+    .profile-select {
+      flex: 1;
+      padding: 8px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 13px;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      transition: all 0.3s ease;
+    }
+    
+    .profile-select:focus {
+      outline: none;
+      border-color: var(--accent-blue);
+    }
+    
+    .btn-icon {
+      background: var(--bg-secondary);
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      color: var(--text-primary);
+    }
+    
+    .btn-icon:hover {
+      background: var(--bg-hover);
+      border-color: var(--accent-blue);
+      transform: translateY(-1px);
+    }
+    
     .restrictions-section {
       margin-bottom: 24px;
     }
@@ -623,6 +676,19 @@
     <div class="sidebar">
       <h2>⚙️ Settings</h2>
       
+      <!-- Profile Management -->
+      <div class="profile-section">
+        <label>Profile:</label>
+        <div class="profile-controls">
+          <select id="profileSelect" class="profile-select">
+            <option value="">Loading...</option>
+          </select>
+          <button id="createProfileBtn" class="btn-icon" title="Create New Profile">➕</button>
+          <button id="deleteProfileBtn" class="btn-icon" title="Delete Profile" style="display: none;">🗑️</button>
+        </div>
+        <div id="profileStatus" style="margin-top: 8px; color: #28a745; font-size: 12px;"></div>
+      </div>
+      
       <div class="restrictions-section">
         <label>Allergies:</label>
         <div class="checkbox-group">
@@ -742,9 +808,10 @@
       <!-- History Panel -->
       <div class="history-panel">
         <h3>📋 Scan History</h3>
-        <div style="margin-bottom: 16px;">
-          <button id="showSafe" class="btn btn-success" style="width: 48%; padding: 8px; font-size: 12px;">Safe</button>
-          <button id="showUnsafe" class="btn" style="width: 48%; padding: 8px; font-size: 12px; background: #dc3545; color: white;">Unsafe</button>
+        <div style="margin-bottom: 16px; display: flex; gap: 4px;">
+          <button id="showAll" class="btn" style="flex: 1; padding: 8px; font-size: 12px; background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%); color: white;">All</button>
+          <button id="showSafe" class="btn btn-success" style="flex: 1; padding: 8px; font-size: 12px;">Safe</button>
+          <button id="showUnsafe" class="btn" style="flex: 1; padding: 8px; font-size: 12px; background: #6c757d; color: white;">Unsafe</button>
         </div>
         <div id="historyList">
           <div class="empty-state">No scan history yet</div>

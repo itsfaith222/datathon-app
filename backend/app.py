@@ -7,40 +7,97 @@ import json
 from dataset_loader import check_ingredient_against_restrictions
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-PROFILE_FILE = os.path.join(BASE_DIR, "profile.json")
+PROFILES_FILE = os.path.join(BASE_DIR, "profiles.json")
+PROFILE_FILE = os.path.join(BASE_DIR, "profile.json")  # Legacy file
 HISTORY_FILE = os.path.join(BASE_DIR, "history.json")
 
 app = Flask(__name__, static_folder=os.path.join(BASE_DIR, "..", "frontend"), static_url_path="/")
 CORS(app)
 
 # In-memory storage (fallback if files don't exist)
-user_profile = {"allergies": [], "restrictions": []}
 saved_items = []  # Last 2 scanned items
 
-def load_profile():
-    """Load user profile from file or return default."""
-    global user_profile
+def load_profiles():
+    """Load all profiles from file or return default structure."""
     try:
-        if os.path.exists(PROFILE_FILE):
+        if os.path.exists(PROFILES_FILE):
+            with open(PROFILES_FILE, 'r') as f:
+                data = json.load(f)
+                # Ensure structure is correct
+                if isinstance(data, dict) and "profiles" in data:
+                    return data
+        # Try to migrate from old profile.json
+        elif os.path.exists(PROFILE_FILE):
             with open(PROFILE_FILE, 'r') as f:
-                user_profile = json.load(f)
-        return user_profile
+                old_profile = json.load(f)
+                # Migrate old profile to new format
+                profiles_data = {
+                    "profiles": [{
+                        "id": "default",
+                        "name": "Default Profile",
+                        "allergies": old_profile.get("allergies", []),
+                        "restrictions": old_profile.get("restrictions", []),
+                        "createdAt": "2024-01-01T00:00:00Z"
+                    }],
+                    "activeProfileId": "default"
+                }
+                save_profiles(profiles_data)
+                return profiles_data
+        # Return default structure
+        return {
+            "profiles": [{
+                "id": "default",
+                "name": "Default Profile",
+                "allergies": [],
+                "restrictions": [],
+                "createdAt": "2024-01-01T00:00:00Z"
+            }],
+            "activeProfileId": "default"
+        }
     except Exception as e:
-        print(f"Error loading profile: {e}")
-        return {"allergies": [], "restrictions": []}
+        print(f"Error loading profiles: {e}")
+        return {
+            "profiles": [{
+                "id": "default",
+                "name": "Default Profile",
+                "allergies": [],
+                "restrictions": [],
+                "createdAt": "2024-01-01T00:00:00Z"
+            }],
+            "activeProfileId": "default"
+        }
 
 
-def save_profile(profile):
-    """Save user profile to file."""
-    global user_profile
+def save_profiles(profiles_data):
+    """Save all profiles to file."""
     try:
-        user_profile = profile
-        with open(PROFILE_FILE, 'w') as f:
-            json.dump(profile, f)
+        with open(PROFILES_FILE, 'w') as f:
+            json.dump(profiles_data, f, indent=2)
         return True
     except Exception as e:
-        print(f"Error saving profile: {e}")
+        print(f"Error saving profiles: {e}")
         return False
+
+
+def get_active_profile():
+    """Get the currently active profile."""
+    profiles_data = load_profiles()
+    active_id = profiles_data.get("activeProfileId", "default")
+    
+    for profile in profiles_data.get("profiles", []):
+        if profile.get("id") == active_id:
+            return profile
+    
+    # If active profile not found, return first profile or default
+    if profiles_data.get("profiles"):
+        return profiles_data["profiles"][0]
+    
+    return {"id": "default", "name": "Default Profile", "allergies": [], "restrictions": []}
+
+
+def load_profile():
+    """Load active user profile (for backward compatibility)."""
+    return get_active_profile()
 
 
 def load_history():
@@ -70,7 +127,7 @@ def save_history(items):
 
 
 # Initialize on startup
-load_profile()
+load_profiles()  # Initialize profiles system
 load_history()
 
 
@@ -206,29 +263,195 @@ def scan_barcode(barcode):
 
 
 # -------- Profile endpoints --------
+@app.route("/api/profiles", methods=["GET"])
+def list_profiles():
+    """List all profiles."""
+    profiles_data = load_profiles()
+    return jsonify({
+        "profiles": profiles_data.get("profiles", []),
+        "activeProfileId": profiles_data.get("activeProfileId", "default")
+    })
+
+
+@app.route("/api/profiles", methods=["POST"])
+def create_profile():
+    """Create a new profile."""
+    data = request.get_json() or {}
+    name = data.get("name", "").strip()
+    
+    if not name:
+        return jsonify({"error": "Profile name is required"}), 400
+    
+    profiles_data = load_profiles()
+    profiles = profiles_data.get("profiles", [])
+    
+    # Check if name already exists
+    if any(p.get("name", "").lower() == name.lower() for p in profiles):
+        return jsonify({"error": "Profile name already exists"}), 400
+    
+    # Generate unique ID
+    import uuid
+    profile_id = str(uuid.uuid4())
+    
+    new_profile = {
+        "id": profile_id,
+        "name": name,
+        "allergies": data.get("allergies", []),
+        "restrictions": data.get("restrictions", []),
+        "createdAt": data.get("createdAt") or __import__("datetime").datetime.utcnow().isoformat() + "Z"
+    }
+    
+    profiles.append(new_profile)
+    profiles_data["profiles"] = profiles
+    
+    if save_profiles(profiles_data):
+        return jsonify({"ok": True, "profile": new_profile}), 201
+    else:
+        return jsonify({"error": "Failed to create profile"}), 500
+
+
+@app.route("/api/profiles/<profile_id>", methods=["GET"])
+def get_profile(profile_id):
+    """Get a specific profile by ID."""
+    profiles_data = load_profiles()
+    profiles = profiles_data.get("profiles", [])
+    
+    for profile in profiles:
+        if profile.get("id") == profile_id:
+            return jsonify(profile)
+    
+    return jsonify({"error": "Profile not found"}), 404
+
+
+@app.route("/api/profiles/<profile_id>", methods=["PUT"])
+def update_profile(profile_id):
+    """Update a profile."""
+    data = request.get_json() or {}
+    profiles_data = load_profiles()
+    profiles = profiles_data.get("profiles", [])
+    
+    for i, profile in enumerate(profiles):
+        if profile.get("id") == profile_id:
+            # Update allowed fields
+            if "name" in data:
+                new_name = data["name"].strip()
+                if not new_name:
+                    return jsonify({"error": "Profile name cannot be empty"}), 400
+                # Check if name conflicts with another profile
+                if any(p.get("name", "").lower() == new_name.lower() and p.get("id") != profile_id for p in profiles):
+                    return jsonify({"error": "Profile name already exists"}), 400
+                profiles[i]["name"] = new_name
+            
+            if "allergies" in data:
+                profiles[i]["allergies"] = data["allergies"] if isinstance(data["allergies"], list) else []
+            
+            if "restrictions" in data:
+                profiles[i]["restrictions"] = data["restrictions"] if isinstance(data["restrictions"], list) else []
+            
+            profiles_data["profiles"] = profiles
+            
+            if save_profiles(profiles_data):
+                return jsonify({"ok": True, "profile": profiles[i]})
+            else:
+                return jsonify({"error": "Failed to update profile"}), 500
+    
+    return jsonify({"error": "Profile not found"}), 404
+
+
+@app.route("/api/profiles/<profile_id>", methods=["DELETE"])
+def delete_profile(profile_id):
+    """Delete a profile."""
+    profiles_data = load_profiles()
+    profiles = profiles_data.get("profiles", [])
+    
+    # Don't allow deleting the last profile
+    if len(profiles) <= 1:
+        return jsonify({"error": "Cannot delete the last profile"}), 400
+    
+    # Find and remove profile
+    original_count = len(profiles)
+    profiles = [p for p in profiles if p.get("id") != profile_id]
+    
+    if len(profiles) == original_count:
+        return jsonify({"error": "Profile not found"}), 404
+    
+    # If deleted profile was active, set first profile as active
+    if profiles_data.get("activeProfileId") == profile_id:
+        profiles_data["activeProfileId"] = profiles[0]["id"]
+    
+    profiles_data["profiles"] = profiles
+    
+    if save_profiles(profiles_data):
+        return jsonify({"ok": True})
+    else:
+        return jsonify({"error": "Failed to delete profile"}), 500
+
+
+@app.route("/api/profiles/active", methods=["POST"])
+def set_active_profile():
+    """Set the active profile."""
+    data = request.get_json() or {}
+    profile_id = data.get("profileId") or data.get("id")
+    
+    if not profile_id:
+        return jsonify({"error": "Profile ID is required"}), 400
+    
+    profiles_data = load_profiles()
+    profiles = profiles_data.get("profiles", [])
+    
+    # Verify profile exists
+    if not any(p.get("id") == profile_id for p in profiles):
+        return jsonify({"error": "Profile not found"}), 404
+    
+    profiles_data["activeProfileId"] = profile_id
+    
+    if save_profiles(profiles_data):
+        return jsonify({"ok": True, "activeProfileId": profile_id})
+    else:
+        return jsonify({"error": "Failed to set active profile"}), 500
+
+
+# Backward compatibility endpoints
 @app.route("/api/profile/restrictions", methods=["GET"])
 def get_restrictions():
-    """Get user's dietary restrictions and allergies."""
-    profile = load_profile()
-    return jsonify(profile)
+    """Get active profile's dietary restrictions and allergies (backward compatible)."""
+    profile = get_active_profile()
+    return jsonify({
+        "allergies": profile.get("allergies", []),
+        "restrictions": profile.get("restrictions", [])
+    })
 
 
 @app.route("/api/profile/restrictions", methods=["POST"])
 def save_restrictions():
-    """Save user's dietary restrictions and allergies."""
+    """Save active profile's dietary restrictions and allergies (backward compatible)."""
     data = request.get_json() or {}
     allergies = data.get("allergies", [])
     restrictions = data.get("restrictions", [])
     
-    profile = {
-        "allergies": allergies if isinstance(allergies, list) else [],
-        "restrictions": restrictions if isinstance(restrictions, list) else []
-    }
+    profiles_data = load_profiles()
+    active_id = profiles_data.get("activeProfileId", "default")
+    profiles = profiles_data.get("profiles", [])
     
-    if save_profile(profile):
-        return jsonify({"ok": True, "profile": profile})
-    else:
-        return jsonify({"error": "Failed to save profile"}), 500
+    # Find and update active profile
+    for i, profile in enumerate(profiles):
+        if profile.get("id") == active_id:
+            profiles[i]["allergies"] = allergies if isinstance(allergies, list) else []
+            profiles[i]["restrictions"] = restrictions if isinstance(restrictions, list) else []
+            profiles_data["profiles"] = profiles
+            
+            if save_profiles(profiles_data):
+                return jsonify({
+                    "ok": True,
+                    "profile": {
+                        "allergies": profiles[i]["allergies"],
+                        "restrictions": profiles[i]["restrictions"]
+                    }
+                })
+            else:
+                return jsonify({"error": "Failed to save profile"}), 500
+    
+    return jsonify({"error": "Active profile not found"}), 404
 
 
 def check_allergens_from_product_data(product_data, profile):
