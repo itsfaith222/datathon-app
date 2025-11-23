@@ -799,16 +799,43 @@ function showCheckResults(result, barcode) {
             closePopup(this, barcode, true, []);
         });
     } else {
-        let flaggedList = '';
-        result.flagged.forEach(item => {
-            flaggedList += `<li><strong>${escapeHtml(item.ingredient)}</strong> - ${escapeHtml(item.type)}: ${escapeHtml(item.item)}</li>`;
-        });
+
+        const allergies = result.flagged.filter(item => item.type === 'allergy');
+        const restrictions = result.flagged.filter(item => item.type === 'restriction');
+
+        let contentHtml = '';
+
+        if (allergies.length > 0) {
+            let allergyList = '';
+            allergies.forEach(item => {
+                allergyList += `<li><strong>${escapeHtml(item.ingredient)}</strong>: ${escapeHtml(item.item)}</li>`;
+            });
+            contentHtml += `
+                <div class="alert-section" style="margin-bottom: 16px;">
+                    <h4 style="color: #dc3545; margin-bottom: 8px; border-bottom: 1px solid #f5c6cb; padding-bottom: 4px;">🤧 Allergy Alerts</h4>
+                    <ul>${allergyList}</ul>
+                </div>
+            `;
+        }
+
+        if (restrictions.length > 0) {
+            let restrictionList = '';
+            restrictions.forEach(item => {
+                restrictionList += `<li><strong>${escapeHtml(item.ingredient)}</strong>: ${escapeHtml(item.item)}</li>`;
+            });
+            contentHtml += `
+                <div class="alert-section">
+                    <h4 style="color: #856404; margin-bottom: 8px; border-bottom: 1px solid #ffeeba; padding-bottom: 4px;">🚫 Dietary Restrictions</h4>
+                    <ul>${restrictionList}</ul>
+                </div>
+            `;
+        }
 
         popup.innerHTML = `
             <div class="popup-content">
-                <h3>⚠️ Dietary Restriction Alert</h3>
-                <p style="color: #555;">This product contains ingredients that match your restrictions:</p>
-                <ul>${flaggedList}</ul>
+                <h3>⚠️ Alert</h3>
+                <p style="color: #555; margin-bottom: 16px;">This product matches your profile settings:</p>
+                ${contentHtml}
                 <button class="close-popup-btn">Close</button>
             </div>
         `;
