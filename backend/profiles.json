@@ -1,0 +1,19 @@
+{
+  "profiles": [
+    {
+      "id": "default",
+      "name": "Default Profile",
+      "allergies": [],
+      "restrictions": [],
+      "createdAt": "2024-01-01T00:00:00Z"
+    },
+    {
+      "id": "749b53d1-56e9-495e-96a5-ee955951e79c",
+      "name": "Kai",
+      "allergies": [],
+      "restrictions": [],
+      "createdAt": "2025-11-23T21:38:17.507178Z"
+    }
+  ],
+  "activeProfileId": "749b53d1-56e9-495e-96a5-ee955951e79c"
+}

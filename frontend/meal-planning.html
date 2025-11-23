@@ -1,0 +1,615 @@
+<!-- frontend/meal-planning.html -->
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Meal Planning - Health Scanner</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    /* CSS Variables - Food App Color Scheme */
+    :root {
+      --main-green: #87BC96;
+      --negative-space: #F9F9F9;
+      --main-text: #1E3A5F;
+      --action-orange: #FF8C42;
+      --bg-primary: var(--negative-space);
+      --bg-card: #FFFFFF;
+      --bg-secondary: #F0F4F2;
+      --bg-hover: #E8EDEA;
+      --text-primary: var(--main-text);
+      --text-secondary: #4A5D6B;
+      --text-muted: #6B7A87;
+      --text-light: #8B9BA8;
+      --border-color: #D4E0D9;
+      --accent-green: var(--main-green);
+      --accent-green-dark: #6FA37E;
+      --accent-orange: var(--action-orange);
+      --accent-orange-dark: #E67A2E;
+      --shadow: rgba(44, 62, 80, 0.08);
+      --shadow-hover: rgba(135, 188, 150, 0.2);
+    }
+    
+    /* Dark Mode Variables */
+    [data-theme="dark"] {
+      --bg-primary: #1A2A3A;
+      --bg-card: #243447;
+      --bg-secondary: #2A3D52;
+      --bg-hover: #334A5F;
+      --text-primary: #E8F0F5;
+      --text-secondary: #C4D4E0;
+      --text-muted: #9BB0C0;
+      --text-light: #7A95A8;
+      --border-color: #3A4F65;
+      --accent-green: #6FA37E;
+      --accent-green-dark: #5A8A68;
+      --accent-orange: #FF9D5C;
+      --accent-orange-dark: #E67A2E;
+      --shadow: rgba(0, 0, 0, 0.3);
+      --shadow-hover: rgba(111, 163, 126, 0.3);
+    }
+    
+    body { 
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+      background: var(--bg-primary);
+      background-attachment: fixed;
+      min-height: 100vh;
+      padding: 20px;
+      color: var(--text-primary);
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+    
+    /* Subtle green accent background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(135, 188, 150, 0.05) 0%, rgba(255, 140, 66, 0.03) 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    
+    .container {
+      position: relative;
+      z-index: 1;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(135, 188, 150, 0.1) 0%, rgba(255, 140, 66, 0.08) 100%);
+      border-radius: 16px;
+      border: 2px solid var(--accent-green);
+    }
+    
+    .header-title-section {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    
+    .header h1 {
+      color: var(--main-text);
+      font-size: 32px;
+      font-weight: 700;
+      margin: 0;
+    }
+    
+    .back-btn {
+      background: var(--accent-orange);
+      color: white;
+      border: 2px solid var(--accent-orange-dark);
+      padding: 10px 20px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 8px rgba(255, 140, 66, 0.3);
+    }
+    
+    .back-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 140, 66, 0.4);
+      background: var(--accent-orange-dark);
+    }
+    
+    .theme-toggle {
+      background: var(--bg-card);
+      border: 2px solid var(--accent-green);
+      border-radius: 50px;
+      padding: 8px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 8px var(--shadow);
+      transition: all 0.3s ease;
+      color: var(--text-primary);
+      font-weight: 600;
+      font-size: 13px;
+    }
+    
+    .theme-toggle:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(135, 188, 150, 0.3);
+      border-color: var(--accent-orange);
+      background: rgba(135, 188, 150, 0.1);
+    }
+    
+    .theme-toggle-icon {
+      font-size: 18px;
+    }
+    
+    .main-card {
+      background: linear-gradient(135deg, var(--bg-card) 0%, rgba(135, 188, 150, 0.05) 100%);
+      border-radius: 16px;
+      padding: 30px;
+      box-shadow: 0 4px 20px var(--shadow);
+      margin-bottom: 20px;
+      border: 2px solid var(--accent-green);
+    }
+    
+    .input-section {
+      background: linear-gradient(135deg, rgba(135, 188, 150, 0.08) 0%, rgba(255, 140, 66, 0.05) 100%);
+      padding: 20px;
+      border-radius: 12px;
+      border: 2px solid var(--accent-green);
+      margin-bottom: 30px;
+    }
+    
+    .input-section label {
+      display: block;
+      margin-bottom: 10px;
+      font-weight: 600;
+      color: var(--main-text);
+      font-size: 16px;
+    }
+    
+    .input-section textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 15px;
+      border: 2px solid var(--accent-green);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 14px;
+      background: white;
+      color: var(--text-primary);
+      resize: vertical;
+      transition: all 0.3s ease;
+    }
+    
+    .input-section textarea:focus {
+      outline: none;
+      border-color: var(--accent-orange);
+      box-shadow: 0 0 0 3px rgba(255, 140, 66, 0.2);
+      background: rgba(255, 255, 255, 0.95);
+    }
+    
+    .generate-btn {
+      background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
+      color: white;
+      border: 2px solid var(--accent-orange-dark);
+      padding: 14px 28px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      font-size: 16px;
+      transition: all 0.3s ease;
+      width: 100%;
+      box-shadow: 0 4px 12px rgba(255, 140, 66, 0.3);
+    }
+    
+    .generate-btn:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 16px rgba(255, 140, 66, 0.4);
+      background: linear-gradient(135deg, var(--accent-orange-dark) 0%, var(--accent-orange) 100%);
+    }
+    
+    .generate-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 20px;
+      color: var(--text-secondary);
+    }
+    
+    .loading-spinner {
+      border: 3px solid rgba(135, 188, 150, 0.2);
+      border-top: 3px solid var(--accent-orange);
+      border-right: 3px solid var(--accent-green);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 10px;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .meal-plan-result {
+      margin-top: 30px;
+      padding: 25px;
+      background: linear-gradient(135deg, rgba(135, 188, 150, 0.1) 0%, rgba(255, 140, 66, 0.08) 100%);
+      border-radius: 12px;
+      border: 2px solid var(--accent-green);
+      box-shadow: 0 4px 12px rgba(135, 188, 150, 0.2);
+    }
+    
+    .meal-plan-result h3 {
+      margin-bottom: 20px;
+      color: var(--main-text);
+      font-size: 24px;
+      font-weight: 700;
+      padding-bottom: 10px;
+      border-bottom: 2px solid var(--accent-orange);
+    }
+    
+    .meal-day {
+      margin-bottom: 20px;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      border: 2px solid var(--accent-green);
+      box-shadow: 0 2px 8px rgba(135, 188, 150, 0.15);
+      transition: all 0.3s ease;
+    }
+    
+    .meal-day:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(135, 188, 150, 0.25);
+      border-color: var(--accent-orange);
+    }
+    
+    .meal-day h4 {
+      color: var(--accent-green);
+      margin-bottom: 15px;
+      font-size: 20px;
+      font-weight: 700;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--accent-green);
+    }
+    
+    .meal-item {
+      padding: 10px 0;
+      padding-left: 12px;
+      border-left: 3px solid var(--accent-orange);
+      margin-bottom: 8px;
+      background: rgba(255, 140, 66, 0.05);
+      border-radius: 4px;
+      transition: all 0.2s ease;
+    }
+    
+    .meal-item:hover {
+      background: rgba(255, 140, 66, 0.1);
+      border-left-color: var(--accent-green);
+      transform: translateX(4px);
+    }
+    
+    .meal-item:last-child {
+      margin-bottom: 0;
+    }
+    
+    .meal-item strong {
+      color: var(--accent-orange);
+      font-weight: 700;
+    }
+    
+    .actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+    }
+    
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
+      color: white;
+    }
+    
+    .btn-success {
+      background: linear-gradient(135deg, var(--accent-green) 0%, var(--accent-green-dark) 100%);
+      color: white;
+      border: 2px solid var(--accent-green-dark);
+    }
+    
+    .btn-primary {
+      border: 2px solid var(--accent-orange-dark);
+    }
+    
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px var(--shadow);
+    }
+    
+    .error-message {
+      background: #f8d7da;
+      color: #721c24;
+      padding: 15px;
+      border-radius: 8px;
+      margin-top: 15px;
+      border-left: 4px solid #dc3545;
+    }
+    
+    [data-theme="dark"] .error-message {
+      background: #3d1f22;
+      color: #f5c6cb;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="header-title-section">
+        <h1>🍽️ Meal Planning</h1>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+          <span class="theme-toggle-icon" id="themeIcon">🌙</span>
+          <span id="themeText">Dark Mode</span>
+        </button>
+      </div>
+      <a href="index.html" class="back-btn">← Back to Scanner</a>
+    </div>
+    
+    <div class="main-card">
+      <div class="input-section">
+        <label for="userPrompt">Tell me about your food goals and preferences:</label>
+        <textarea 
+          id="userPrompt" 
+          placeholder="Example: I want a 7-day vegetarian meal plan for weight loss. I'm allergic to nuts and dairy. I prefer Mediterranean cuisine..."
+        ></textarea>
+      </div>
+      
+      <button id="generateBtn" class="generate-btn" onclick="generateMealPlan()">
+        Generate Meal Plan
+      </button>
+      
+      <div id="loadingIndicator" class="loading" style="display: none;">
+        <div class="loading-spinner"></div>
+        <p>Creating your personalized meal plan...</p>
+      </div>
+      
+      <div id="errorMessage" class="error-message" style="display: none;"></div>
+      
+      <div id="mealPlanResult"></div>
+    </div>
+  </div>
+  
+  <script>
+    // Theme Management
+    function initTheme() {
+      const savedTheme = localStorage.getItem('theme') || 'light';
+      setTheme(savedTheme);
+    }
+    
+    function setTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme);
+      localStorage.setItem('theme', theme);
+      
+      const themeIcon = document.getElementById('themeIcon');
+      const themeText = document.getElementById('themeText');
+      
+      if (theme === 'dark') {
+        themeIcon.textContent = '☀️';
+        themeText.textContent = 'Light Mode';
+      } else {
+        themeIcon.textContent = '🌙';
+        themeText.textContent = 'Dark Mode';
+      }
+    }
+    
+    function toggleTheme() {
+      const currentTheme = document.documentElement.getAttribute('data-theme');
+      const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+      setTheme(newTheme);
+    }
+    
+    initTheme();
+    
+    // Meal Plan Generation
+    async function generateMealPlan() {
+      const prompt = document.getElementById('userPrompt').value.trim();
+      
+      if (!prompt) {
+        showError('Please enter your food goals and preferences.');
+        return;
+      }
+      
+      const generateBtn = document.getElementById('generateBtn');
+      const loadingIndicator = document.getElementById('loadingIndicator');
+      const errorMessage = document.getElementById('errorMessage');
+      const mealPlanResult = document.getElementById('mealPlanResult');
+      
+      // Show loading, hide results
+      generateBtn.disabled = true;
+      loadingIndicator.style.display = 'block';
+      errorMessage.style.display = 'none';
+      mealPlanResult.innerHTML = '';
+      
+      try {
+        const urls = [
+          '/api/generate-meal-plan',
+          'http://localhost:5000/api/generate-meal-plan'
+        ];
+        
+        let success = false;
+        for (const url of urls) {
+          try {
+            const resp = await fetch(url, {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: JSON.stringify({prompt: prompt})
+            });
+            
+            if (resp.ok) {
+              const data = await resp.json();
+              displayMealPlan(data.mealPlan);
+              success = true;
+              break;
+            } else {
+              const error = await resp.json().catch(() => ({}));
+              throw new Error(error.error || 'Failed to generate meal plan');
+            }
+          } catch (e) {
+            if (url === urls[urls.length - 1]) {
+              throw e;
+            }
+            continue;
+          }
+        }
+      } catch (error) {
+        showError(error.message || 'Failed to generate meal plan. Please try again.');
+      } finally {
+        generateBtn.disabled = false;
+        loadingIndicator.style.display = 'none';
+      }
+    }
+    
+    function showError(message) {
+      const errorMessage = document.getElementById('errorMessage');
+      errorMessage.textContent = message;
+      errorMessage.style.display = 'block';
+    }
+    
+    function displayMealPlan(mealPlanText) {
+      const mealPlanResult = document.getElementById('mealPlanResult');
+      
+      // Parse the meal plan text into structured format
+      // This is a simple parser - you may need to adjust based on Gemini's output format
+      const lines = mealPlanText.split('\n').filter(line => line.trim());
+      
+      let html = '<div class="meal-plan-result">';
+      html += '<h3>Your Personalized Meal Plan</h3>';
+      html += '<div class="actions">';
+      html += '<button class="btn btn-success" onclick="checkMealPlan()">Check Against Restrictions</button>';
+      html += '<button class="btn btn-primary" onclick="saveMealPlan()">Save Meal Plan</button>';
+      html += '</div>';
+      
+      // Try to parse structured format, or display as-is
+      let currentDay = '';
+      let inDay = false;
+      
+      lines.forEach(line => {
+        const trimmed = line.trim();
+        if (!trimmed) return;
+        
+        // Check if it's a day header
+        if (trimmed.match(/^(Day|Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)/i)) {
+          if (currentDay) {
+            html += '</div>';
+          }
+          currentDay = trimmed;
+          html += `<div class="meal-day"><h4>${escapeHtml(trimmed)}</h4>`;
+          inDay = true;
+        } else if (trimmed.match(/^(Breakfast|Lunch|Dinner|Snack)/i)) {
+          if (inDay) {
+            html += `<div class="meal-item"><strong>${escapeHtml(trimmed)}</strong></div>`;
+          }
+        } else if (inDay && trimmed.startsWith('-') || trimmed.startsWith('•')) {
+          html += `<div class="meal-item">${escapeHtml(trimmed)}</div>`;
+        } else if (inDay) {
+          html += `<div class="meal-item">${escapeHtml(trimmed)}</div>`;
+        }
+      });
+      
+      if (currentDay) {
+        html += '</div>';
+      }
+      
+      // If no structured format found, display as formatted text
+      if (!currentDay) {
+        html += '<div style="white-space: pre-wrap; line-height: 1.6;">' + escapeHtml(mealPlanText) + '</div>';
+      }
+      
+      html += '</div>';
+      mealPlanResult.innerHTML = html;
+      
+      // Store meal plan in sessionStorage for checking
+      sessionStorage.setItem('currentMealPlan', JSON.stringify({
+        text: mealPlanText,
+        timestamp: new Date().toISOString()
+      }));
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    function checkMealPlan() {
+      // Redirect to main page with meal plan check flag
+      sessionStorage.setItem('checkMealPlan', 'true');
+      window.location.href = 'index.html';
+    }
+    
+    async function saveMealPlan() {
+      const mealPlanData = sessionStorage.getItem('currentMealPlan');
+      if (!mealPlanData) {
+        alert('No meal plan to save.');
+        return;
+      }
+      
+      try {
+        const urls = [
+          '/api/save-meal-plan',
+          'http://localhost:5000/api/save-meal-plan'
+        ];
+        
+        for (const url of urls) {
+          try {
+            const resp = await fetch(url, {
+              method: 'POST',
+              headers: {'Content-Type': 'application/json'},
+              body: mealPlanData
+            });
+            
+            if (resp.ok) {
+              alert('Meal plan saved successfully!');
+              return;
+            }
+          } catch (e) {
+            continue;
+          }
+        }
+        alert('Failed to save meal plan.');
+      } catch (error) {
+        alert('Error saving meal plan: ' + error.message);
+      }
+    }
+  </script>
+</body>
+</html>
+

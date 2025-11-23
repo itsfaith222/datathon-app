@@ -1,161 +1,957 @@
 <!-- frontend/index.html -->
 <!doctype html>
 <html>
+
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>Health Scanner (Demo)</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>NutriLens</title>
   <style>
-    body { 
-      font-family: Arial, Helvetica, sans-serif; 
-      max-width:1200px; 
-      margin:20px auto; 
-      padding:12px; 
-      background-color: #001f3f; /* Navy blue */
-      color: white; /* White text for readability */
-      min-height: 100vh;
-    }
-    h1, p { color: white; }
-    video { border: 1px solid #aaa; border-radius:6px; }
-    .safe { color: green; font-weight: 700; font-size:18px; }
-    .unsafe { color: red; font-weight: 800; font-size:20px; animation: flash 0.7s infinite; }
-    @keyframes flash { 50% { opacity: 0.4 } }
-    
-    .product-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 20px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      background: white;
-    }
-    
-    .product-table th {
-      background-color: #f5f5f5;
-      padding: 12px;
-      text-align: left;
-      font-weight: bold;
-      border-bottom: 2px solid #ddd;
-      position: sticky;
-      top: 0;
-    }
-    
-    .product-table td {
-      padding: 10px 12px;
-      border-bottom: 1px solid #eee;
-      word-wrap: break-word;
-      max-width: 400px;
-    }
-    
-    .product-table tr:hover {
-      background-color: #f9f9f9;
-    }
-    
-    .product-table .field-name {
-      font-weight: 600;
-      color: #333;
-      width: 200px;
-    }
-    
-    .product-table .field-value {
-      color: #666;
-    }
-    
-    .product-header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 20px;
-      border-radius: 8px;
-      margin-bottom: 20px;
-    }
-    
-    .product-header h2 {
+    * {
       margin: 0;
+      padding: 0;
+      box-sizing: border-box;
     }
-    
-    .product-header img {
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+
+    /* CSS Variables - Food App Color Scheme */
+    :root {
+      --main-green: #87BC96;
+      --negative-space: #F9F9F9;
+      --main-text: #1E3A5F;
+      --action-orange: #FF8C42;
+      --bg-primary: var(--negative-space);
+      --bg-card: #FFFFFF;
+      --bg-secondary: #F0F4F2;
+      --bg-hover: #E8EDEA;
+      --text-primary: var(--main-text);
+      --text-secondary: #4A5D6B;
+      --text-muted: #6B7A87;
+      --text-light: #8B9BA8;
+      --border-color: #D4E0D9;
+      --accent-green: var(--main-green);
+      --accent-green-dark: #6FA37E;
+      --accent-orange: var(--action-orange);
+      --accent-orange-dark: #E67A2E;
+      --shadow: rgba(44, 62, 80, 0.08);
+      --shadow-hover: rgba(135, 188, 150, 0.2);
     }
-    
-    #productTableContainer {
-      max-height: 600px;
+
+    /* Dark Mode Variables */
+    [data-theme="dark"] {
+      --bg-primary: #1A2A3A;
+      --bg-card: #243447;
+      --bg-secondary: #2A3D52;
+      --bg-hover: #334A5F;
+      --text-primary: #E8F0F5;
+      --text-secondary: #C4D4E0;
+      --text-muted: #9BB0C0;
+      --text-light: #7A95A8;
+      --border-color: #3A4F65;
+      --accent-green: #6FA37E;
+      --accent-green-dark: #5A8A68;
+      --accent-orange: #FF9D5C;
+      --accent-orange-dark: #E67A2E;
+      --shadow: rgba(0, 0, 0, 0.3);
+      --shadow-hover: rgba(111, 163, 126, 0.3);
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: var(--bg-primary);
+      background-attachment: fixed;
+      min-height: 100vh;
+      padding: 20px;
+      color: var(--text-primary);
+      transition: background 0.3s ease, color 0.3s ease;
+    }
+
+    /* Subtle green accent background */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, rgba(135, 188, 150, 0.05) 0%, rgba(255, 140, 66, 0.03) 100%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .dashboard-container {
+      position: relative;
+      z-index: 1;
+    }
+
+    .dashboard-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: 280px 1fr 320px;
+      gap: 20px;
+      height: calc(100vh - 40px);
+    }
+
+    /* Main Header with Title and Theme Toggle */
+    .main-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 2px solid var(--accent-green);
+    }
+
+    .main-header h1 {
+      margin: 0;
+      color: var(--main-text);
+      font-size: 28px;
+      font-weight: 700;
+    }
+
+    /* Theme Toggle Button */
+    .theme-toggle {
+      background: var(--bg-card);
+      border: 2px solid var(--border-color);
+      border-radius: 50px;
+      padding: 8px 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 2px 8px var(--shadow);
+      transition: all 0.3s ease;
+      color: var(--text-primary);
+      font-weight: 600;
+      font-size: 13px;
+    }
+
+    .theme-toggle:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px var(--shadow);
+      border-color: var(--accent-green);
+    }
+
+    .theme-toggle-icon {
+      font-size: 18px;
+    }
+
+    /* Left Sidebar - Restrictions */
+    .sidebar {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 20px var(--shadow);
       overflow-y: auto;
-      margin-top: 20px;
+      backdrop-filter: blur(10px);
+      transition: background 0.3s ease;
+      border: 1px solid var(--border-color);
     }
-    
-    .similar-product-item:hover {
-      background: rgba(255, 255, 255, 0.25) !important;
-      transform: translateX(5px);
+
+    .sidebar h2 {
+      color: var(--main-text);
+      margin-bottom: 20px;
+      font-size: 22px;
+      font-weight: 700;
+      border-bottom: 2px solid var(--accent-green);
+      padding-bottom: 10px;
     }
-    
-    .similar-products-container {
-      animation: fadeIn 0.5s ease-in;
+
+    .profile-section {
+      margin-bottom: 24px;
+      padding-bottom: 20px;
+      border-bottom: 2px solid var(--border-color);
     }
-    
-    button {
-      background-color: #0074D9;
+
+    .profile-section label {
+      display: block;
+      color: var(--text-secondary);
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .profile-controls {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .profile-select {
+      flex: 1;
+      padding: 8px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 13px;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      transition: all 0.3s ease;
+    }
+
+    .profile-select:focus {
+      outline: none;
+      border-color: var(--accent-green);
+    }
+
+    .btn-icon {
+      background: var(--bg-secondary);
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 14px;
+      transition: all 0.2s ease;
+      color: var(--text-primary);
+    }
+
+    .btn-icon:hover {
+      background: var(--bg-hover);
+      border-color: var(--accent-green);
+      transform: translateY(-1px);
+    }
+
+    .restrictions-section {
+      margin-bottom: 24px;
+    }
+
+    .restrictions-section label {
+      display: block;
+      color: var(--text-secondary);
+      font-weight: 600;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+
+    .restrictions-section select {
+      width: 100%;
+      padding: 8px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 13px;
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      transition: all 0.3s ease;
+    }
+
+    .restrictions-section select:focus {
+      outline: none;
+      border-color: var(--accent-green);
+    }
+
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 8px;
+      background: var(--bg-secondary);
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+    }
+
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 4px;
+      transition: background 0.2s ease;
+      user-select: none;
+    }
+
+    .checkbox-label:hover {
+      background: var(--bg-hover);
+    }
+
+    .checkbox-label input[type="checkbox"] {
+      cursor: pointer;
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent-green);
+      flex-shrink: 0;
+    }
+
+    .checkbox-label span {
+      color: var(--text-primary);
+      font-size: 13px;
+    }
+
+    .active-restrictions {
+      background: var(--bg-secondary);
+      padding: 12px;
+      border-radius: 8px;
+      margin-top: 16px;
+      border-left: 3px solid var(--accent-green);
+      transition: background 0.3s ease;
+    }
+
+    .active-restrictions strong {
+      color: var(--accent-green);
+      font-size: 12px;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .restriction-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 12px;
+      font-size: 11px;
+      margin: 3px;
+      font-weight: 500;
+    }
+
+    .badge-allergy {
+      background: #FFE8E0;
+      color: #D32F2F;
+      border: 1px solid #FFB8A0;
+    }
+
+    .badge-restriction {
+      background: #E8F5EB;
+      color: #2E7D4E;
+      border: 1px solid #B8E0C8;
+    }
+
+    .save-btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
       color: white;
       border: none;
-      padding: 10px 20px;
-      border-radius: 5px;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 600;
       cursor: pointer;
-      font-size: 16px;
-      margin-right: 10px;
+      margin-top: 12px;
+      transition: transform 0.2s;
     }
-    
-    button:hover:not(:disabled) {
-      background-color: #0056b3;
+
+    .save-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px var(--shadow-hover);
     }
-    
-    button:disabled {
-      background-color: #555;
-      cursor: not-allowed;
-      opacity: 0.6;
+
+    .meal-plan-btn {
+      width: 100%;
+      background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
+      color: white;
+      border: none;
+      padding: 12px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s;
+      text-align: center;
+      font-size: 14px;
     }
-    
-    #scanOutput, #checkOutput {
+
+    .meal-plan-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 140, 66, 0.3);
+    }
+
+    /* Main Content Area */
+    .main-content {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 4px 20px var(--shadow);
+      overflow-y: auto;
+      backdrop-filter: blur(10px);
+      transition: background 0.3s ease;
+      border: 1px solid var(--border-color);
+    }
+
+
+    .scanner-section {
+      background: var(--bg-secondary);
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 24px;
+      transition: background 0.3s ease;
+    }
+
+    .scanner-controls {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 15px;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
       color: white;
     }
-    
-    #manualBarcode::placeholder {
-      color: rgba(255, 255, 255, 0.5);
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px var(--shadow-hover);
     }
-    
-    #manualBarcode:focus {
+
+    .btn-secondary {
+      background: var(--text-muted);
+      color: white;
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, var(--accent-green) 0%, var(--accent-green-dark) 100%);
+      color: white;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .manual-input {
+      display: flex;
+      gap: 10px;
+      margin-top: 15px;
+    }
+
+    .manual-input input {
+      flex: 1;
+      padding: 10px;
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+      font-size: 14px;
+      background: var(--bg-card);
+      color: var(--text-primary);
+      transition: all 0.3s ease;
+    }
+
+    .manual-input input:focus {
       outline: none;
-      border-color: #0074D9;
-      background-color: rgba(255, 255, 255, 0.15);
+      border-color: var(--accent-green);
+    }
+
+    .manual-input input::placeholder {
+      color: var(--text-muted);
+    }
+
+    #reader {
+      margin-top: 15px;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+
+    .product-display {
+      margin-top: 24px;
+    }
+
+    .product-header {
+      background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .product-header img {
+      max-width: 120px;
+      max-height: 120px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px var(--shadow);
+    }
+
+    .product-header h2 {
+      margin: 0;
+      flex: 1;
+    }
+
+    .ingredients-list {
+      background: var(--bg-secondary);
+      padding: 20px;
+      border-radius: 12px;
+      margin-top: 20px;
+      transition: background 0.3s ease;
+    }
+
+    .ingredients-list h4 {
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+
+    .ingredients-list ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .ingredients-list li {
+      padding: 8px 0;
+      border-bottom: 1px solid var(--border-color);
+      color: var(--text-secondary);
+    }
+
+    .ingredients-list li:last-child {
+      border-bottom: none;
+    }
+
+    /* Right Sidebar - History & Notifications */
+    .right-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    .history-panel,
+    .notifications-panel {
+      background: var(--bg-card);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 4px 20px var(--shadow);
+      backdrop-filter: blur(10px);
+      overflow-y: auto;
+      max-height: calc(50vh - 30px);
+      transition: background 0.3s ease;
+      border: 1px solid var(--border-color);
+    }
+
+    .history-panel h3,
+    .notifications-panel h3 {
+      color: var(--main-text);
+      margin-bottom: 16px;
+      font-size: 18px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      border-bottom: 2px solid var(--accent-green);
+      padding-bottom: 10px;
+    }
+
+    .notification-item,
+    .history-item {
+      background: var(--bg-secondary);
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border-left: 3px solid var(--accent-green);
+    }
+
+    .notification-item:hover,
+    .history-item:hover {
+      background: var(--bg-hover);
+      transform: translateX(4px);
+    }
+
+    .notification-item.unsafe {
+      border-left-color: #dc3545;
+    }
+
+    .history-item.safe {
+      border-left-color: var(--accent-green);
+    }
+
+    .history-item.unsafe {
+      border-left-color: #dc3545;
+    }
+
+    .notification-item h4,
+    .history-item h4 {
+      font-size: 14px;
+      color: var(--text-primary);
+      margin-bottom: 4px;
+    }
+
+    .notification-item p,
+    .history-item p {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin: 0;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--text-light);
+      font-size: 14px;
+    }
+
+    /* Loading Spinner */
+    .loading-spinner {
+      border: 4px solid rgba(74, 144, 226, 0.2);
+      border-top: 4px solid var(--accent-green);
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+
+    @keyframes spin {
+      0% {
+        transform: rotate(0deg);
+      }
+
+      100% {
+        transform: rotate(360deg);
+      }
+    }
+
+    .loading-container {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-secondary);
+    }
+
+    /* Popup Modal */
+    .popup-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      backdrop-filter: blur(4px);
+    }
+
+    .popup-content {
+      background: var(--bg-card);
+      padding: 30px;
+      border-radius: 16px;
+      max-width: 500px;
+      width: 90%;
+      box-shadow: 0 20px 60px var(--shadow);
+      animation: slideUp 0.3s ease-out;
+      color: var(--text-primary);
+      transition: background 0.3s ease;
+    }
+
+    @keyframes slideUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .popup-content h3 {
+      color: #dc3545;
+      margin-top: 0;
+      margin-bottom: 16px;
+    }
+
+    .popup-content.safe h3 {
+      color: var(--accent-green);
+    }
+
+    .popup-content ul {
+      margin: 16px 0;
+      padding-left: 20px;
+    }
+
+    .popup-content li {
+      margin: 8px 0;
+      color: var(--text-secondary);
+    }
+
+    .popup-content p {
+      color: var(--text-secondary);
+    }
+
+    .popup-content button {
+      background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 16px;
+      width: 100%;
+    }
+
+    .popup-content button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px var(--shadow-hover);
+    }
+
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 600;
+      margin-left: 8px;
+    }
+
+    .status-safe {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status-unsafe {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    /* Dark mode adjustments */
+    [data-theme="dark"] .badge-allergy {
+      background: rgba(211, 47, 47, 0.2);
+      color: #ff6b6b;
+    }
+
+    [data-theme="dark"] .badge-restriction {
+      background: rgba(25, 118, 210, 0.2);
+      color: #64b5f6;
+    }
+
+    [data-theme="dark"] .scanner-section p {
+      color: var(--text-secondary);
+    }
+
+    [data-theme="dark"] #scanOutput {
+      color: var(--text-secondary);
+    }
+
+    [data-theme="dark"] .active-restrictions {
+      background: rgba(74, 144, 226, 0.1);
     }
   </style>
 </head>
+
 <body>
-  <h1>Health Scanner</h1>
-  <p>Click <strong>Start Scanner</strong>, then hold the barcode (on the product or on your phone screen) in front of your laptop camera.</p>
+  <!-- Theme Toggle Button -->
+  <div class="dashboard-container">
+    <!-- Left Sidebar: Restrictions -->
+    <div class="sidebar">
+      <h2>⚙️ Settings</h2>
 
-  <div>
-    <button id="startScanner">Start Scanner</button>
-    <button id="stopScanner" disabled>Stop Scanner</button>
+      <!-- Navigation to Meal Planning -->
+      <div style="margin-bottom: 20px;">
+        <a href="meal-planning.html" class="meal-plan-btn" style="display: block; text-decoration: none;">
+          🍽️ Meal Planning
+        </a>
+      </div>
+
+      <!-- Profile Management -->
+      <div class="profile-section">
+        <label>Profile:</label>
+        <div class="profile-controls">
+          <select id="profileSelect" class="profile-select">
+            <option value="">Loading...</option>
+          </select>
+          <button id="createProfileBtn" class="btn-icon" title="Create New Profile">➕</button>
+          <button id="deleteProfileBtn" class="btn-icon" title="Delete Profile" style="display: none;">🗑️</button>
+        </div>
+        <div id="profileStatus" style="margin-top: 8px; color: #28a745; font-size: 12px;"></div>
+      </div>
+
+      <div class="restrictions-section">
+        <label>Allergies:</label>
+        <div class="checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" value="peanuts" class="allergy-checkbox">
+            <span>Peanuts</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="tree nuts" class="allergy-checkbox">
+            <span>Tree Nuts</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="milk" class="allergy-checkbox">
+            <span>Milk</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="eggs" class="allergy-checkbox">
+            <span>Eggs</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="fish" class="allergy-checkbox">
+            <span>Fish</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="shellfish" class="allergy-checkbox">
+            <span>Shellfish</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="soy" class="allergy-checkbox">
+            <span>Soy</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="wheat" class="allergy-checkbox">
+            <span>Wheat</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="corn" class="allergy-checkbox">
+            <span>Corn</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="sesame" class="allergy-checkbox">
+            <span>Sesame</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="celery" class="allergy-checkbox">
+            <span>Celery</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="mustard" class="allergy-checkbox">
+            <span>Mustard</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="lupin" class="allergy-checkbox">
+            <span>Lupin</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="molluscs" class="allergy-checkbox">
+            <span>Molluscs</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="coconut" class="allergy-checkbox">
+            <span>Coconut</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="cocoa" class="allergy-checkbox">
+            <span>Cocoa</span>
+          </label>
+        </div>
+      </div>
+
+      <div class="restrictions-section">
+        <label>Dietary Restrictions:</label>
+        <div class="checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" value="vegan" class="restriction-checkbox">
+            <span>Vegan</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="vegetarian" class="restriction-checkbox">
+            <span>Vegetarian</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="gluten-free" class="restriction-checkbox">
+            <span>Gluten-Free</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="halal" class="restriction-checkbox">
+            <span>Halal</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="kosher" class="restriction-checkbox">
+            <span>Kosher</span>
+          </label>
+        </div>
+      </div>
+
+      <button id="saveRestrictions" class="save-btn">Save Restrictions</button>
+      <div id="restrictionsStatus" style="margin-top: 10px; color: #28a745; font-size: 12px;"></div>
+
+      <div class="active-restrictions">
+        <strong>Currently Checking Against:</strong>
+        <div id="activeRestrictionsList" style="margin-top: 8px;">
+          <em style="color: #999; font-size: 12px;">No restrictions set</em>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Content: Scanner -->
+    <div class="main-content">
+      <div class="main-header">
+        <h1>🔍 NutriLens</h1>
+        <button class="theme-toggle" id="themeToggle" onclick="toggleTheme()">
+          <span class="theme-toggle-icon" id="themeIcon">🌙</span>
+          <span id="themeText">Dark Mode</span>
+        </button>
+      </div>
+
+      <div class="scanner-section">
+        <p style="color: var(--text-secondary); margin-bottom: 15px;">Scan a barcode or enter manually to check product
+          ingredients</p>
+
+        <div class="scanner-controls">
+          <button id="startScanner" class="btn btn-primary">Start Scanner</button>
+          <button id="stopScanner" class="btn btn-secondary" disabled>Stop Scanner</button>
+        </div>
+
+        <div class="manual-input">
+          <input type="text" id="manualBarcode" placeholder="Or enter barcode manually">
+          <button id="searchBarcode" class="btn btn-primary">Search</button>
+        </div>
+
+        <div id="reader" style="width: 100%; max-width: 500px;"></div>
+      </div>
+
+      <div id="scanOutput" style="margin-top: 15px; color: #666;"></div>
+
+      <div id="checkOutput" class="product-display"></div>
+
+      <div id="runCheckContainer" style="margin-top: 20px;"></div>
+
+      <div id="productTableContainer"></div>
+    </div>
+
+    <!-- Right Sidebar: History & Notifications -->
+    <div class="right-sidebar">
+      <!-- Notifications Panel -->
+      <div class="notifications-panel">
+        <div
+          style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; border-bottom: 2px solid var(--accent-green); padding-bottom: 10px;">
+          <h3 style="margin: 0; border: none; padding: 0;">🔔 Notifications <span id="notificationCount"
+              class="status-badge" style="background: #dc3545; color: white; display: none;">0</span></h3>
+          <button id="clearNotificationsBtn" class="btn"
+            style="padding: 4px 8px; font-size: 11px; background: #dc3545; color: white;">Clear All</button>
+        </div>
+        <div id="notificationsList">
+          <div class="empty-state">No notifications yet</div>
+        </div>
+      </div>
+
+      <!-- Scanned Items Panel -->
+      <div class="history-panel">
+        <h3>📦 Scanned Items</h3>
+        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Items scanned but not yet checked</p>
+        <div id="scannedItemsList">
+          <div class="empty-state">No scanned items yet</div>
+        </div>
+      </div>
+
+      <!-- History Panel -->
+      <div class="history-panel" style="margin-top: 20px;">
+        <h3>📋 Checked History</h3>
+        <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 12px;">Items checked against restrictions
+        </p>
+        <div style="margin-bottom: 16px; display: flex; gap: 4px;">
+          <button id="showAll" class="btn"
+            style="flex: 1; padding: 8px; font-size: 12px; background: linear-gradient(135deg, var(--accent-orange) 0%, var(--accent-orange-dark) 100%); color: white;">All</button>
+          <button id="showSafe" class="btn btn-success" style="flex: 1; padding: 8px; font-size: 12px;">Safe</button>
+          <button id="showUnsafe" class="btn"
+            style="flex: 1; padding: 8px; font-size: 12px; background: #6c757d; color: white;">Unsafe</button>
+        </div>
+        <div id="historyList">
+          <div class="empty-state">No check history yet</div>
+        </div>
+      </div>
+    </div>
   </div>
-
-  <div style="margin-top:15px; display: flex; align-items: center; gap: 10px;">
-    <label for="manualBarcode" style="color: white;">Or enter barcode manually:</label>
-    <input type="text" id="manualBarcode" placeholder="Enter barcode number" 
-           style="padding: 8px 12px; border-radius: 5px; border: 1px solid #555; 
-                  background-color: rgba(255, 255, 255, 0.1); color: white; 
-                  font-size: 14px; width: 200px;">
-    <button id="searchBarcode" style="padding: 8px 20px;">Search</button>
-  </div>
-
-  <div style="margin-top:12px;">
-    <!-- The div where the scanner UI will be rendered -->
-    <div id="reader" style="width: 500px"></div>
-  </div>
-
-  <div id="scanOutput" style="margin-top:12px;"></div>
-  <div id="checkOutput" style="margin-top:12px;"></div>
-  <div id="productTableContainer"></div>
 
   <!-- html5-qrcode library -->
   <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
   <script src="script.js"></script>
 </body>
+
 </html>
