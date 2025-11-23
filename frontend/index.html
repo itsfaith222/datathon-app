@@ -115,6 +115,16 @@
     #scanOutput, #checkOutput {
       color: white;
     }
+    
+    #manualBarcode::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+    
+    #manualBarcode:focus {
+      outline: none;
+      border-color: #0074D9;
+      background-color: rgba(255, 255, 255, 0.15);
+    }
   </style>
 </head>
 <body>
@@ -124,6 +134,15 @@
   <div>
     <button id="startScanner">Start Scanner</button>
     <button id="stopScanner" disabled>Stop Scanner</button>
+  </div>
+
+  <div style="margin-top:15px; display: flex; align-items: center; gap: 10px;">
+    <label for="manualBarcode" style="color: white;">Or enter barcode manually:</label>
+    <input type="text" id="manualBarcode" placeholder="Enter barcode number" 
+           style="padding: 8px 12px; border-radius: 5px; border: 1px solid #555; 
+                  background-color: rgba(255, 255, 255, 0.1); color: white; 
+                  font-size: 14px; width: 200px;">
+    <button id="searchBarcode" style="padding: 8px 20px;">Search</button>
   </div>
 
   <div style="margin-top:12px;">

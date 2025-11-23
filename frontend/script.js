@@ -4,6 +4,8 @@ const stopBtn = document.getElementById("stopScanner");
 const scanOutput = document.getElementById("scanOutput");
 const checkOutput = document.getElementById("checkOutput");
 const productTableContainer = document.getElementById("productTableContainer");
+const manualBarcodeInput = document.getElementById("manualBarcode");
+const searchBarcodeBtn = document.getElementById("searchBarcode");
 
 let html5QrcodeScanner = null;
 let isScanning = false;
@@ -100,6 +102,30 @@ docReady(function() {
             }
         }
     });
+});
+
+// Manual barcode search functionality
+searchBarcodeBtn.addEventListener("click", () => {
+    const barcode = manualBarcodeInput.value.trim();
+    if (!barcode) {
+        alert("Please enter a barcode number");
+        return;
+    }
+    
+    // Clear previous results
+    scanOutput.innerHTML = `<strong>Manual Entry:</strong> ${barcode}`;
+    checkOutput.innerHTML = "";
+    productTableContainer.innerHTML = "";
+    
+    // Call the same checkProduct function used by scanner
+    checkProduct(barcode);
+});
+
+// Allow Enter key to trigger search
+manualBarcodeInput.addEventListener("keypress", (e) => {
+    if (e.key === "Enter") {
+        searchBarcodeBtn.click();
+    }
 });
 
 // Function to check product with backend API
