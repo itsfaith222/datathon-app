@@ -16,6 +16,9 @@ const historyList = document.getElementById("historyList");
 const showSafeBtn = document.getElementById("showSafe");
 const showUnsafeBtn = document.getElementById("showUnsafe");
 const notificationCount = document.getElementById("notificationCount");
+const themeToggle = document.getElementById("themeToggle");
+const themeIcon = document.getElementById("themeIcon");
+const themeText = document.getElementById("themeText");
 
 let html5QrcodeScanner = null;
 let isScanning = false;
@@ -24,6 +27,37 @@ let currentBarcode = null;
 let notifications = JSON.parse(localStorage.getItem('notifications') || '[]');
 let scanHistory = JSON.parse(localStorage.getItem('scanHistory') || '[]');
 let currentHistoryFilter = 'all'; // 'all', 'safe', 'unsafe'
+
+// Theme Management
+function initTheme() {
+    const savedTheme = localStorage.getItem('theme') || 'light';
+    setTheme(savedTheme);
+}
+
+function setTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    
+    if (theme === 'dark') {
+        themeIcon.textContent = '☀️';
+        themeText.textContent = 'Light Mode';
+    } else {
+        themeIcon.textContent = '🌙';
+        themeText.textContent = 'Dark Mode';
+    }
+}
+
+function toggleTheme() {
+    const currentTheme = document.documentElement.getAttribute('data-theme');
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+}
+
+// Make toggleTheme globally accessible
+window.toggleTheme = toggleTheme;
+
+// Initialize theme on page load
+initTheme();
 
 // Function to run after the DOM is ready
 function docReady(fn) {
