@@ -231,6 +231,89 @@ def save_restrictions():
         return jsonify({"error": "Failed to save profile"}), 500
 
 
+def check_allergens_from_product_data(product_data, profile):
+    """
+    Check Open Food Facts allergen fields directly.
+    Returns list of flagged allergens.
+    """
+    flagged = []
+    user_allergies = [a.lower().strip() for a in profile.get("allergies", [])]
+    
+    if not user_allergies:
+        return flagged
+    
+    # Check allergens_tags (most reliable - array format)
+    allergens_tags = product_data.get("allergens_tags", [])
+    if isinstance(allergens_tags, list):
+        for allergen_tag in allergens_tags:
+            # Open Food Facts format: "en:milk" -> extract "milk"
+            # Remove language prefixes and common separators
+            allergen_name = allergen_tag
+            for prefix in ["en:", "fr:", "de:", "es:", "it:", "pt:"]:
+                allergen_name = allergen_name.replace(prefix, "")
+            allergen_name = allergen_name.replace("-", " ").replace("_", " ").strip()
+            allergen_lower = allergen_name.lower()
+            
+            # Check against user allergies
+            for user_allergy in user_allergies:
+                user_allergy_lower = user_allergy.lower()
+                # Check if allergen matches user allergy (bidirectional substring match)
+                if (user_allergy_lower == allergen_lower or
+                    user_allergy_lower in allergen_lower or 
+                    allergen_lower in user_allergy_lower):
+                    flagged.append({
+                        "type": "allergy",
+                        "item": user_allergy,
+                        "ingredient": allergen_name,
+                        "source": "allergens_tags"
+                    })
+                    break  # Don't flag same allergen twice
+    
+    # Check allergens text field
+    allergens_text = product_data.get("allergens", "")
+    if allergens_text and isinstance(allergens_text, str):
+        allergens_text_lower = allergens_text.lower()
+        for user_allergy in user_allergies:
+            user_allergy_lower = user_allergy.lower()
+            if user_allergy_lower in allergens_text_lower:
+                # Check if not already flagged
+                already_flagged = any(
+                    f.get("item", "").lower() == user_allergy_lower and 
+                    f.get("source") == "allergens_text"
+                    for f in flagged
+                )
+                if not already_flagged:
+                    flagged.append({
+                        "type": "allergy",
+                        "item": user_allergy,
+                        "ingredient": allergens_text,
+                        "source": "allergens_text"
+                    })
+    
+    # Check allergens_from_ingredients
+    allergens_from_ing = product_data.get("allergens_from_ingredients", "")
+    if allergens_from_ing and isinstance(allergens_from_ing, str):
+        allergens_from_ing_lower = allergens_from_ing.lower()
+        for user_allergy in user_allergies:
+            user_allergy_lower = user_allergy.lower()
+            if user_allergy_lower in allergens_from_ing_lower:
+                # Check if not already flagged
+                already_flagged = any(
+                    f.get("item", "").lower() == user_allergy_lower and 
+                    f.get("source") == "allergens_from_ingredients"
+                    for f in flagged
+                )
+                if not already_flagged:
+                    flagged.append({
+                        "type": "allergy",
+                        "item": user_allergy,
+                        "ingredient": allergens_from_ing,
+                        "source": "allergens_from_ingredients"
+                    })
+    
+    return flagged
+
+
 # -------- Check ingredients endpoint --------
 @app.route("/api/check", methods=["POST"])
 def check_ingredients():
@@ -253,11 +336,28 @@ def check_ingredients():
     if not product_data:
         return jsonify({"error": "Product data not found"}), 404
     
-    # Extract ingredients
+    flagged = []
+    
+    # FIRST: Check Open Food Facts allergen fields directly (most reliable)
+    allergen_flags = check_allergens_from_product_data(product_data, profile)
+    flagged.extend(allergen_flags)
+    
+    # SECOND: Extract and check ingredients
     ingredients_text = product_data.get("ingredients_text") or product_data.get("ingredients_text_en") or ""
     ingredients_list = []
     if ingredients_text:
+        # Better parsing: split by comma, but also handle parentheses
         ingredients_list = [ing.strip() for ing in str(ingredients_text).split(",") if ing.strip()]
+        # Also extract ingredients from parentheses (e.g., "milk powder (milk, whey)")
+        for ing in ingredients_list[:]:  # Use slice to avoid modifying during iteration
+            if "(" in ing and ")" in ing:
+                # Extract content from parentheses
+                start = ing.find("(")
+                end = ing.find(")")
+                if start < end:
+                    nested = ing[start+1:end].strip()
+                    nested_ingredients = [n.strip() for n in nested.split(",") if n.strip()]
+                    ingredients_list.extend(nested_ingredients)
     
     # Also check ingredients array if available
     if not ingredients_list and "ingredients" in product_data:
@@ -266,11 +366,17 @@ def check_ingredients():
             ingredients_list = [ing.get("text", "") for ing in ingredients if isinstance(ing, dict) and ing.get("text")]
     
     # Check each ingredient against restrictions
-    flagged = []
     for ingredient in ingredients_list:
         result = check_ingredient_against_restrictions(ingredient, profile)
         if result:
-            flagged.append(result)
+            # Avoid duplicates
+            already_flagged = any(
+                f.get("ingredient", "").lower() == ingredient.lower() and
+                f.get("item", "").lower() == result.get("item", "").lower()
+                for f in flagged
+            )
+            if not already_flagged:
+                flagged.append(result)
     
     return jsonify({
         "flagged": flagged,

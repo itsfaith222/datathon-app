@@ -8,8 +8,8 @@ const manualBarcodeInput = document.getElementById("manualBarcode");
 const searchBarcodeBtn = document.getElementById("searchBarcode");
 const runCheckContainer = document.getElementById("runCheckContainer");
 const saveRestrictionsBtn = document.getElementById("saveRestrictions");
-const allergiesSelect = document.getElementById("allergiesSelect");
-const restrictionsSelect = document.getElementById("restrictionsSelect");
+const allergyCheckboxes = document.querySelectorAll(".allergy-checkbox");
+const restrictionCheckboxes = document.querySelectorAll(".restriction-checkbox");
 const restrictionsStatus = document.getElementById("restrictionsStatus");
 const notificationsList = document.getElementById("notificationsList");
 const historyList = document.getElementById("historyList");
@@ -75,8 +75,12 @@ docReady(function() {
     displayHistory();
     
     // Update display when selections change
-    allergiesSelect.addEventListener('change', updateActiveRestrictionsDisplay);
-    restrictionsSelect.addEventListener('change', updateActiveRestrictionsDisplay);
+    allergyCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateActiveRestrictionsDisplay);
+    });
+    restrictionCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', updateActiveRestrictionsDisplay);
+    });
     
     // History filter buttons
     showSafeBtn.addEventListener('click', () => {
@@ -96,8 +100,12 @@ docReady(function() {
 
 // Update active restrictions display
 function updateActiveRestrictionsDisplay() {
-    const allergies = Array.from(allergiesSelect.selectedOptions).map(opt => opt.value);
-    const restrictions = Array.from(restrictionsSelect.selectedOptions).map(opt => opt.value);
+    const allergies = Array.from(allergyCheckboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+    const restrictions = Array.from(restrictionCheckboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
     
     const activeRestrictionsList = document.getElementById("activeRestrictionsList");
     
@@ -130,11 +138,11 @@ async function loadRestrictions() {
                 const resp = await fetch(url);
                 if (resp.ok) {
                     const data = await resp.json();
-                    Array.from(allergiesSelect.options).forEach(opt => {
-                        opt.selected = data.allergies.includes(opt.value);
+                    allergyCheckboxes.forEach(checkbox => {
+                        checkbox.checked = data.allergies.includes(checkbox.value);
                     });
-                    Array.from(restrictionsSelect.options).forEach(opt => {
-                        opt.selected = data.restrictions.includes(opt.value);
+                    restrictionCheckboxes.forEach(checkbox => {
+                        checkbox.checked = data.restrictions.includes(checkbox.value);
                     });
                     updateActiveRestrictionsDisplay();
             return;
@@ -150,8 +158,12 @@ async function loadRestrictions() {
 
 // Save restrictions functionality
 saveRestrictionsBtn.addEventListener("click", async () => {
-    const allergies = Array.from(allergiesSelect.selectedOptions).map(opt => opt.value);
-    const restrictions = Array.from(restrictionsSelect.selectedOptions).map(opt => opt.value);
+    const allergies = Array.from(allergyCheckboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
+    const restrictions = Array.from(restrictionCheckboxes)
+        .filter(cb => cb.checked)
+        .map(cb => cb.value);
     
     try {
         const urls = [

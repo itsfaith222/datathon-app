@@ -140,6 +140,46 @@
       border-color: var(--accent-blue);
     }
     
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 200px;
+      overflow-y: auto;
+      padding: 8px;
+      background: var(--bg-secondary);
+      border: 2px solid var(--border-color);
+      border-radius: 8px;
+    }
+    
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 6px;
+      border-radius: 4px;
+      transition: background 0.2s ease;
+      user-select: none;
+    }
+    
+    .checkbox-label:hover {
+      background: var(--bg-hover);
+    }
+    
+    .checkbox-label input[type="checkbox"] {
+      cursor: pointer;
+      width: 18px;
+      height: 18px;
+      accent-color: var(--accent-blue);
+      flex-shrink: 0;
+    }
+    
+    .checkbox-label span {
+      color: var(--text-primary);
+      font-size: 13px;
+    }
+    
     .active-restrictions {
       background: var(--bg-secondary);
       padding: 12px;
@@ -585,27 +625,66 @@
       
       <div class="restrictions-section">
         <label>Allergies:</label>
-        <select id="allergiesSelect" multiple size="5">
-          <option value="peanuts">Peanuts</option>
-          <option value="tree nuts">Tree Nuts</option>
-          <option value="milk">Milk</option>
-          <option value="eggs">Eggs</option>
-          <option value="fish">Fish</option>
-          <option value="shellfish">Shellfish</option>
-          <option value="soy">Soy</option>
-          <option value="wheat">Wheat</option>
-        </select>
+        <div class="checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" value="peanuts" class="allergy-checkbox">
+            <span>Peanuts</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="tree nuts" class="allergy-checkbox">
+            <span>Tree Nuts</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="milk" class="allergy-checkbox">
+            <span>Milk</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="eggs" class="allergy-checkbox">
+            <span>Eggs</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="fish" class="allergy-checkbox">
+            <span>Fish</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="shellfish" class="allergy-checkbox">
+            <span>Shellfish</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="soy" class="allergy-checkbox">
+            <span>Soy</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="wheat" class="allergy-checkbox">
+            <span>Wheat</span>
+          </label>
+        </div>
       </div>
       
       <div class="restrictions-section">
         <label>Dietary Restrictions:</label>
-        <select id="restrictionsSelect" multiple size="5">
-          <option value="vegan">Vegan</option>
-          <option value="vegetarian">Vegetarian</option>
-          <option value="gluten-free">Gluten-Free</option>
-          <option value="halal">Halal</option>
-          <option value="kosher">Kosher</option>
-        </select>
+        <div class="checkbox-group">
+          <label class="checkbox-label">
+            <input type="checkbox" value="vegan" class="restriction-checkbox">
+            <span>Vegan</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="vegetarian" class="restriction-checkbox">
+            <span>Vegetarian</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="gluten-free" class="restriction-checkbox">
+            <span>Gluten-Free</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="halal" class="restriction-checkbox">
+            <span>Halal</span>
+          </label>
+          <label class="checkbox-label">
+            <input type="checkbox" value="kosher" class="restriction-checkbox">
+            <span>Kosher</span>
+          </label>
+        </div>
       </div>
       
       <button id="saveRestrictions" class="save-btn">Save Restrictions</button>

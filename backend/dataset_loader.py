@@ -96,13 +96,33 @@ def check_ingredient_against_restrictions(ingredient: str, restrictions: Dict) -
     Check if an ingredient matches any user restrictions.
     Returns dict with restriction info if match found, None otherwise.
     """
+    import re
     ingredient_lower = ingredient.lower().strip()
     
     # Check allergies
     for allergy in restrictions.get("allergies", []):
         allergy_lower = allergy.lower().strip()
-        # Exact match or partial match
-        if allergy_lower in ingredient_lower or ingredient_lower in allergy_lower:
+        
+        # Try exact match first
+        if allergy_lower == ingredient_lower:
+            return {
+                "type": "allergy",
+                "item": allergy,
+                "ingredient": ingredient
+            }
+        
+        # Word boundary matching (e.g., "milk" matches "milk", "milk powder", "contains milk", but not "milky")
+        # Create word boundary pattern
+        pattern = r'\b' + re.escape(allergy_lower) + r'\b'
+        if re.search(pattern, ingredient_lower):
+            return {
+                "type": "allergy",
+                "item": allergy,
+                "ingredient": ingredient
+            }
+        
+        # Also check if allergy is a substring (for compound names like "tree nuts")
+        if allergy_lower in ingredient_lower:
             return {
                 "type": "allergy",
                 "item": allergy,
@@ -123,14 +143,17 @@ def check_ingredient_against_restrictions(ingredient: str, restrictions: Dict) -
         
         if restriction_lower in restriction_patterns:
             for pattern in restriction_patterns[restriction_lower]:
-                if pattern in ingredient_lower:
+                # Use word boundary matching for better accuracy
+                pattern_re = r'\b' + re.escape(pattern) + r'\b'
+                if re.search(pattern_re, ingredient_lower):
                     return {
                         "type": "restriction",
                         "item": restriction,
                         "ingredient": ingredient
                     }
-        # Direct match
-        elif restriction_lower in ingredient_lower:
+        # Direct match with word boundary
+        pattern_re = r'\b' + re.escape(restriction_lower) + r'\b'
+        if re.search(pattern_re, ingredient_lower):
             return {
                 "type": "restriction",
                 "item": restriction,
